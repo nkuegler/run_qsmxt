@@ -4,7 +4,7 @@
 #SBATCH -c 32	
 #SBATCH --mem 200G	
 #SBATCH --time 90	
-#SBATCH -o /data/p_03037/LORAKS/bids/derivatives/qsm/code/logs/%j.out	# redirect the output
+#SBATCH -o /data/u_kuegler_software/git/qsm/run_qsmxt/logs/%j.out	# redirect the output
 #
 
 SUBJECT="$1"
@@ -14,9 +14,10 @@ OUTPUT_DIR=/data/p_03037/LORAKS/bids/derivatives/qsm/qsmxt_allSubj
 SUPPL_DIR=${OUTPUT_DIR}/supplementary
 mkdir -p ${SUPPL_DIR/$SUBJECT}
 
+cd ${OUTPUT_DIR}
 
-qsmxt $INPUT_DIR \
-    $SUPPL_DIR/$SUBJECT \
+qsmxt ${INPUT_DIR} \
+    ${SUPPL_DIR}/${SUBJECT} \
     --premade 'gre' \
     --labels_file '/data/u_kuegler_software/miniforge3/envs/qsmxt8/lib/python3.8/site-packages/qsmxt/aseg_labels.csv' \
     --subjects "${SUBJECT}" \
