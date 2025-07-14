@@ -10,7 +10,7 @@ A repository to QSMxT for a batch of subject/sessions
 getserver -sb
 
 cd /path/to/output/dir
-# before the qsmxt command is executed, the singularity container is made available by sourcing `bash.singularity` (custom file) and the correct conda environment is activated after sourcing `bash.preferences` (custom file)
+# before the qsmxt command is executed, the singularity container is made available by sourcing `bash.singularity` (custom file) and the correct conda environment is activated after sourcing `bash.conda` (custom file)
 
 /data/u_kuegler_software/git/qsm/run_qsmxt/call_qsmxt.sh sub-001 sub-002 sub-003
 ```

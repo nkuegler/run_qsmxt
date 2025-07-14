@@ -1,9 +1,5 @@
 #!/bin/bash
 
-### before running this script, make sure to make singularity containers available and to set the following conda environment
-## sing # alias to make singularity containers available
-## conda activate qsmxt8
-
 
 # Example usage:
 # ./call_qsmxt.sh sub-001 sub-002 sub-003
