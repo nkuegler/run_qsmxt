@@ -19,7 +19,7 @@ mkdir -p ${SUPPL_DIR}
 cd ${SUPPL_DIR}
 
 source ~/bash.singularity
-source ~/bash.preferences
+source ~/bash.conda
 conda activate qsmxt8
 
 qsmxt ${INPUT_DIR} \
