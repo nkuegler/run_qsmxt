@@ -24,9 +24,9 @@
 
 
 
-#SBATCH -c 32	
+#SBATCH -c 60	
 #SBATCH --mem 120G	
-#SBATCH --time 120	
+#SBATCH --time 180	
 #SBATCH -o /data/u_kuegler_software/git/qsm/run_qsmxt/logs/%j.out	# redirect the output
 #
 
@@ -66,5 +66,6 @@ qsmxt ${INPUT_DIR} \
     # --existing_masks_pipeline 'synthstrip' \
 
 if [ $? -eq 0 ]; then
+    mkdir -p "${OUTPUT_DIR}/${SUBJECT}"
     mv "${SUPPL_DIR}/${SUBJECT}/${SESSION}" "${OUTPUT_DIR}/${SUBJECT}/${SESSION}"
 fi

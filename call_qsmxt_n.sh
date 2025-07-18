@@ -111,22 +111,22 @@ for subj in "$@"; do
             # Check if anat directory exists and contains .nii or .nii.gz files
             if [ -d "$anat_dir" ] && [ -n "$(find "$anat_dir" -name "*.nii" -o -name "*.nii.gz" 2>/dev/null)" ]; then
                 sessions_found=true
-                echo "  Found valid session: $session (contains anat data)"
+                echo "  Found valid session: $session"
                 
                 # Submit SLURM job for this subject/session combination
                 if [ "$SEQUENTIAL" = true ]; then
                     # Sequential processing: add dependency on previous job
                     if [ -z "$prev_jobid" ]; then
-                        jobid=$(sbatch -p ${SLURM_PARTITIONS} ${SLURM_SCRIPT} "$INPUT_DIR" "$subj" "$session" "$OUTPUT_DIR" | awk '{print $4}')
+                        jobid=$(sbatch -p ${SLURM_PARTITIONS} -x "drachenkopf" ${SLURM_SCRIPT} "$INPUT_DIR" "$subj" "$session" "$OUTPUT_DIR" | awk '{print $4}')
                         echo "  Submitted batch job $jobid for ${subj}/${session}"
                     else
-                        jobid=$(sbatch --dependency=afterany:$prev_jobid -p ${SLURM_PARTITIONS} ${SLURM_SCRIPT} "$INPUT_DIR" "$subj" "$session" "$OUTPUT_DIR" | awk '{print $4}')
+                        jobid=$(sbatch --dependency=afterany:$prev_jobid -p ${SLURM_PARTITIONS} -x "drachenkopf" ${SLURM_SCRIPT} "$INPUT_DIR" "$subj" "$session" "$OUTPUT_DIR" | awk '{print $4}')
                         echo "  Submitted batch job $jobid for ${subj}/${session} with dependency on job $prev_jobid"
                     fi
                     prev_jobid=$jobid
                 else
                     # Parallel processing: submit job without dependencies
-                    jobid=$(sbatch -p ${SLURM_PARTITIONS} ${SLURM_SCRIPT} "$INPUT_DIR" "$subj" "$session" "$OUTPUT_DIR" | awk '{print $4}')
+                    jobid=$(sbatch -p ${SLURM_PARTITIONS} -x "drachenkopf" ${SLURM_SCRIPT} "$INPUT_DIR" "$subj" "$session" "$OUTPUT_DIR" | awk '{print $4}')
                     echo "  Submitted batch job $jobid for ${subj}/${session}"
                 fi
                 ((total_jobs++))
