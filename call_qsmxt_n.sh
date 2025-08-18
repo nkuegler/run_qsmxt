@@ -117,16 +117,16 @@ for subj in "$@"; do
                 if [ "$SEQUENTIAL" = true ]; then
                     # Sequential processing: add dependency on previous job
                     if [ -z "$prev_jobid" ]; then
-                        jobid=$(sbatch -p ${SLURM_PARTITIONS} -x "drachenkopf" ${SLURM_SCRIPT} "$INPUT_DIR" "$subj" "$session" "$OUTPUT_DIR" | awk '{print $4}')
+                        jobid=$(sbatch -p ${SLURM_PARTITIONS} -x "drachenkopf" ${SLURM_SCRIPT} "$INPUT_DIR" "$OUTPUT_DIR" "$subj" "$session" | awk '{print $4}')
                         echo "  Submitted batch job $jobid for ${subj}/${session}"
                     else
-                        jobid=$(sbatch --dependency=afterany:$prev_jobid -p ${SLURM_PARTITIONS} -x "drachenkopf" ${SLURM_SCRIPT} "$INPUT_DIR" "$subj" "$session" "$OUTPUT_DIR" | awk '{print $4}')
+                        jobid=$(sbatch --dependency=afterany:$prev_jobid -p ${SLURM_PARTITIONS} -x "drachenkopf" ${SLURM_SCRIPT} "$INPUT_DIR" "$OUTPUT_DIR" "$subj" "$session" | awk '{print $4}')
                         echo "  Submitted batch job $jobid for ${subj}/${session} with dependency on job $prev_jobid"
                     fi
                     prev_jobid=$jobid
                 else
                     # Parallel processing: submit job without dependencies
-                    jobid=$(sbatch -p ${SLURM_PARTITIONS} -x "drachenkopf" ${SLURM_SCRIPT} "$INPUT_DIR" "$subj" "$session" "$OUTPUT_DIR" | awk '{print $4}')
+                    jobid=$(sbatch -p ${SLURM_PARTITIONS} -x "drachenkopf" ${SLURM_SCRIPT} "$INPUT_DIR" "$OUTPUT_DIR" "$subj" "$session" | awk '{print $4}')
                     echo "  Submitted batch job $jobid for ${subj}/${session}"
                 fi
                 ((total_jobs++))
@@ -135,6 +135,33 @@ for subj in "$@"; do
             fi
         fi
     done < <(find "${subj_dir}" -maxdepth 1 -name "ses-*" -type d -print0 2>/dev/null)
+    
+    # If no session directories found, check for anat directory directly in subject directory
+    if [ "$sessions_found" = false ]; then
+        anat_dir="${subj_dir}/anat"
+        if [ -d "$anat_dir" ] && [ -n "$(find "$anat_dir" -name "*.nii" -o -name "*.nii.gz" 2>/dev/null)" ]; then
+            sessions_found=true
+            echo "  Found anatomical data directly in subject directory (no session directories)"
+            
+            # Submit SLURM job for this subject without session specification
+            if [ "$SEQUENTIAL" = true ]; then
+                # Sequential processing: add dependency on previous job
+                if [ -z "$prev_jobid" ]; then
+                    jobid=$(sbatch -p ${SLURM_PARTITIONS} -x "drachenkopf" ${SLURM_SCRIPT} "$INPUT_DIR" "$OUTPUT_DIR" "$subj" | awk '{print $4}')
+                    echo "  Submitted batch job $jobid for ${subj} (no session)"
+                else
+                    jobid=$(sbatch --dependency=afterany:$prev_jobid -p ${SLURM_PARTITIONS} -x "drachenkopf" ${SLURM_SCRIPT} "$INPUT_DIR" "$OUTPUT_DIR" "$subj" | awk '{print $4}')
+                    echo "  Submitted batch job $jobid for ${subj} (no session) with dependency on job $prev_jobid"
+                fi
+                prev_jobid=$jobid
+            else
+                # Parallel processing: submit job without dependencies
+                jobid=$(sbatch -p ${SLURM_PARTITIONS} -x "drachenkopf" ${SLURM_SCRIPT} "$INPUT_DIR" "$OUTPUT_DIR" "$subj" | awk '{print $4}')
+                echo "  Submitted batch job $jobid for ${subj} (no session)"
+            fi
+            ((total_jobs++))
+        fi
+    fi
     
     if [ "$sessions_found" = false ]; then
         echo "  Warning: No valid sessions found for subject $subj"
