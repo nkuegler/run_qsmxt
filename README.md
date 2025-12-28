@@ -47,12 +47,13 @@ The repository includes scripts for batch brain extraction using FreeSurfer's `m
 ### Usage
 
 ```bash
-./call_synthstrip.sh [--acqs <ACQ_TYPES>] [--no-csf] <INPUT_DIR> <OUTPUT_DIR> <SUBJECT1> [SUBJECT2] ...
+./call_synthstrip.sh [--acqs <ACQ_TYPES>] [--no-csf] [--holefill <ITERATIONS>] <INPUT_DIR> <OUTPUT_DIR> <SUBJECT1> [SUBJECT2] ...
 ```
 
 **Options:**
 - `--acqs <ACQ_TYPES>` - Comma-separated acquisition types (default: `PDw,T1w,MTw`)
 - `--no-csf` - Exclude CSF from brain mask
+- `--holefill <ITERATIONS>` - Enable mask hole-filling with specified dilation/erosion iterations
 
 **Features:**
 - Automatically discovers sessions with anatomical data
@@ -60,6 +61,11 @@ The repository includes scripts for batch brain extraction using FreeSurfer's `m
 - Matches files with `echo-01` or `echo-1` naming conventions
 - GPU acceleration (auto-detected)
 - Generates both brain-extracted images (`_brain.nii`) and masks (`_mask.nii`)
+- **Optional morphological hole-filling** of masks using FSL's fslmaths:
+  - Performed directly within the same SLURM job after mask creation
+  - Uses successive dilation and erosion operations (configurable number of iterations)
+  - Overwrites original mask with filled version
+  - Re-applies filled mask to input image, updating `_brain.nii` output
 - Parallel job submission by default
 - Warning when multiple matching files found per acquisition type (processes all)
 
@@ -72,6 +78,12 @@ The repository includes scripts for batch brain extraction using FreeSurfer's `m
 # Custom acquisition types with CSF exclusion
 ./call_synthstrip.sh --acqs PDw,T1w --no-csf /path/to/input /path/to/output sub-001 sub-002
 
+# With hole-filling (7 iterations)
+./call_synthstrip.sh --holefill 7 /path/to/input /path/to/output sub-001 sub-002
+
+# Combine multiple options
+./call_synthstrip.sh --acqs PDw,T1w --no-csf --holefill 5 /path/to/input /path/to/output sub-001
+
 # IronSleep data example
 ./call_synthstrip.sh \
   /data/pt_02262/data/TH_bids/bids/derivatives/LORAKS_LCPCA_distCorr \
@@ -79,4 +91,12 @@ The repository includes scripts for batch brain extraction using FreeSurfer's `m
   sub-001 sub-002
 ```
 
-> **Note:** SynthStrip works on all SLURM nodes (no node exclusions needed).
+> **Note:** SynthStrip works on all SLURM nodes (no node exclusions needed). When hole-filling is enabled, the original `_mask.nii` file is overwritten with the filled version, and the `_brain.nii` file is regenerated using the filled mask.
+
+
+# Example synthstrip
+
+```
+subjs=$(find /data/pt_02262/data/liege_data/bids/derivatives/LORAKS/derivatives/LCPCA_distCorr/ -maxdepth 1 -type d -name 'sub-*' -exec basename {} \; | tr '\n' ' ')
+./call_synthstrip.sh --no-csf --holefill 7 /data/pt_02262/data/liege_data/bids/derivatives/LORAKS/derivatives/LCPCA_distCorr/ /data/pt_02262/data/liege_data/bids/derivatives/LORAKS/derivatives/LCPCA_distCorr/derivatives/synthstrip/ $subjs
+```
