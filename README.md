@@ -61,6 +61,7 @@ The repository includes scripts for batch brain extraction using FreeSurfer's `m
 - Matches files with `echo-01` or `echo-1` naming conventions
 - GPU acceleration (auto-detected)
 - Generates both brain-extracted images (`_brain.nii`) and masks (`_mask.nii`)
+- **Saves execution command** to `synthstrip_command.txt` in the output directory for reproducibility
 - **Optional morphological hole-filling** of masks using FSL's fslmaths:
   - Performed directly within the same SLURM job after mask creation
   - Uses successive dilation and erosion operations (configurable number of iterations)
@@ -98,5 +99,12 @@ The repository includes scripts for batch brain extraction using FreeSurfer's `m
 
 ```
 subjs=$(find /data/pt_02262/data/liege_data/bids/derivatives/LORAKS/derivatives/LCPCA_distCorr/ -maxdepth 1 -type d -name 'sub-*' -exec basename {} \; | tr '\n' ' ')
+
 ./call_synthstrip.sh --no-csf --holefill 7 /data/pt_02262/data/liege_data/bids/derivatives/LORAKS/derivatives/LCPCA_distCorr/ /data/pt_02262/data/liege_data/bids/derivatives/LORAKS/derivatives/LCPCA_distCorr/derivatives/synthstrip/ $subjs
+
+./call_qsmxt_n.sh /data/pt_02262/data/liege_data/bids/derivatives/LORAKS/derivatives/LCPCA_distCorr/ /data/pt_02262/data/liege_data/bids/derivatives/LORAKS/derivatives/QSMxT/20251228_qsmxt_pdf_synthstripFilled/ $subjs 
 ```
+
+# ToDo
+
+- Implement option to clean up the supplementary directory at the end of each job (and a final clean-up at the end of all jobs)

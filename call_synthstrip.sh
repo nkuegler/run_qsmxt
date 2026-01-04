@@ -31,6 +31,9 @@ NO_CSF="false"
 HOLEFILL="false"
 HOLEFILL_ITERATIONS=""
 
+# Save the original command line before any parsing
+ORIGINAL_COMMAND="$0 $*"
+
 # Parse command line options
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -90,6 +93,25 @@ fi
 
 # Create output directory if it doesn't exist
 mkdir -p "$OUTPUT_DIR"
+
+# Save the full command used to call this script
+COMMAND_FILE="${OUTPUT_DIR}/synthstrip_command.txt"
+echo "Command executed on $(date):" > "$COMMAND_FILE"
+echo "$ORIGINAL_COMMAND" >> "$COMMAND_FILE"
+echo "" >> "$COMMAND_FILE"
+echo "Full command with options:" >> "$COMMAND_FILE"
+echo "  Input Directory: $INPUT_DIR" >> "$COMMAND_FILE"
+echo "  Output Directory: $OUTPUT_DIR" >> "$COMMAND_FILE"
+echo "  Acquisition Types: $ACQ_TYPES" >> "$COMMAND_FILE"
+echo "  Exclude CSF: $NO_CSF" >> "$COMMAND_FILE"
+echo "  Hole-filling: $HOLEFILL" >> "$COMMAND_FILE"
+if [ "$HOLEFILL" = "true" ]; then
+    echo "  Hole-filling iterations: $HOLEFILL_ITERATIONS" >> "$COMMAND_FILE"
+fi
+echo "  Subjects: $@" >> "$COMMAND_FILE"
+echo "" >> "$COMMAND_FILE"
+
+echo "Command saved to: $COMMAND_FILE"
 
 # SLURM configuration
 SLURM_PARTITIONS="short,group_servers,gr_weiskopf"
