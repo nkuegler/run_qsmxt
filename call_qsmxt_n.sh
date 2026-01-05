@@ -15,7 +15,7 @@
 # Arguments:
 #   INPUT_DIR  - Path to input BIDS directory containing subject data
 #   OUTPUT_DIR - Path to output directory for processed results  
-#   SUBJECT*   - One or more subject identifiers (e.g., sub-001, sub-002)
+#   SUBJECT*   - One or more subject identifiers (e.g., sub-001 sub-002)
 #
 # The script will:
 #   1. Check each subject directory for session subdirectories
@@ -76,6 +76,7 @@ mkdir -p "$OUTPUT_DIR"
 # SLURM configuration
 SLURM_PARTITIONS="short,group_servers,gr_weiskopf"
 SLURM_SCRIPT="/data/u_kuegler_software/git/qsm/run_qsmxt/qsmxt_slurm_n.sh"
+# SLURM_SCRIPT="/data/u_kuegler_software/git/qsm/run_qsmxt/qsmxt_slurm_infantdata.sh"
 
 echo "Input Directory: $INPUT_DIR"
 echo "Output Directory: $OUTPUT_DIR"
