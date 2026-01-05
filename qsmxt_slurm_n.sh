@@ -25,9 +25,9 @@
 
 
 #SBATCH -c 60	
-#SBATCH --mem 120G	
+#SBATCH --mem 200G	
 #SBATCH --time 180	
-#SBATCH -o /data/u_kuegler_software/git/qsm/run_qsmxt/logs/%j.out	# redirect the output
+#SBATCH -o /data/u_kuegler_software/git/qsm/run_qsmxt/logs/%j_qsmxt.out	# redirect the output
 #
 
 INPUT_DIR="$1"
@@ -63,12 +63,17 @@ if [[ -n "$SESSION" ]]; then
         --premade 'gre' \
         --do_qsm \
         --do_swi \
+        --do_r2starmap \
+        --do_template \
         --labels_file '/data/u_kuegler_software/miniforge3/envs/qsmxt8/lib/python3.8/site-packages/qsmxt/aseg_labels.csv' \
         --subjects "${SUBJECT}" \
         --sessions "${SESSION}" \
         --recs rec-loraksRsos \
         --acqs acq-T1w acq-PDw acq-MTw \
         --bf_algorithm 'pdf' \
+        --use_existing_masks \
+        --existing_masks_pipeline 'synthstrip' \
+        --qsm_reference none \
         --auto_yes
 else
     # No session specified - include only --subjects, process all sessions
@@ -77,19 +82,57 @@ else
         --premade 'gre' \
         --do_qsm \
         --do_swi \
+        --do_r2starmap \
+        --do_template \
         --labels_file '/data/u_kuegler_software/miniforge3/envs/qsmxt8/lib/python3.8/site-packages/qsmxt/aseg_labels.csv' \
         --subjects "${SUBJECT}" \
         --recs rec-loraksRsos \
         --acqs acq-T1w acq-PDw acq-MTw \
         --bf_algorithm 'pdf' \
+        --use_existing_masks \
+        --existing_masks_pipeline 'synthstrip' \
+        --qsm_reference none \
         --auto_yes
 fi
 
-    # --do_segmentation \
+    # --do_segmentation \ # requires fastsurfer for segmentation
     # --use_existing_masks \
     # --existing_masks_pipeline 'synthstrip' \
+    # --gpu 'cuda'
 
 if [ $? -eq 0 ]; then
     mkdir -p "${OUTPUT_DIR}"
-    mv "${SUPPL_DIR}/${SUBJECT}" "${OUTPUT_DIR}"
+    
+    if [[ -n "$SESSION" ]]; then
+        # Session specified - check and warn if it already exists
+        if [[ -d "${OUTPUT_DIR}/${SUBJECT}/${SESSION}" ]]; then
+            echo "--------"
+            echo "WARNING: Session ${SESSION} already exists in output directory for ${SUBJECT}"
+            echo "WARNING: Existing files will be overwritten!"
+            echo "--------"
+        fi
+    else
+        # No session specified - check and warn if subject already exists
+        if [[ -d "${OUTPUT_DIR}/${SUBJECT}" ]]; then
+            echo "--------"
+            echo "WARNING: Subject ${SUBJECT} already exists in output directory"
+            echo "WARNING: Existing files will be overwritten!"
+            echo "--------"
+        fi
+    fi
+    
+    # Use cp to merge with existing subject directory
+    cp -r "${SUPPL_DIR}/${SUBJECT}" "${OUTPUT_DIR}/"
+
+    # Only remove from supplementary if copy succeeded
+    if [ $? -eq 0 ]; then
+        rm -rf "${SUPPL_DIR}/${SUBJECT}"
+        echo "Successfully moved data to ${OUTPUT_DIR}"
+    else
+        echo "ERROR: Failed to copy results to output directory"
+        echo "Data remains in supplementary directory: ${SUPPL_DIR}/${SUBJECT}"
+        exit 1
+    fi
 fi
+
+        
