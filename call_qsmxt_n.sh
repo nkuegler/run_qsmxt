@@ -7,10 +7,11 @@
 # It automatically discovers sessions with anatomical data and submits jobs
 # with dependencies to ensure sequential processing.
 #
-# Usage: ./call_qsmxt_n.sh [--seq] <INPUT_DIR> <OUTPUT_DIR> <SUBJECT1> <SUBJECT2> ...
+# Usage: ./call_qsmxt_n.sh [--seq] [--transf-to-orig] <INPUT_DIR> <OUTPUT_DIR> <SUBJECT1> <SUBJECT2> ...
 #
 # Options:
-#   --seq      - Process jobs sequentially (with dependencies). Default is parallel.
+#   --seq            - Process jobs sequentially (with dependencies). Default is parallel.
+#   --transf-to-orig - Transform outputs back to original input space using FSL flirt
 #
 # Arguments:
 #   INPUT_DIR  - Path to input BIDS directory containing subject data
@@ -27,6 +28,7 @@
 
 # Check if sufficient arguments are provided and parse options
 SEQUENTIAL=false
+TRANSF_TO_ORIG=false
 
 # Parse command line options
 while [[ $# -gt 0 ]]; do
@@ -35,11 +37,16 @@ while [[ $# -gt 0 ]]; do
             SEQUENTIAL=true
             shift
             ;;
+        --transf-to-orig)
+            TRANSF_TO_ORIG=true
+            shift
+            ;;
         -*)
             echo "Error: Unknown option $1"
-            echo "Usage: $0 [--seq] <INPUT_DIR> <OUTPUT_DIR> <SUBJECT1> [SUBJECT2] ..."
+            echo "Usage: $0 [--seq] [--transf-to-orig] <INPUT_DIR> <OUTPUT_DIR> <SUBJECT1> [SUBJECT2] ..."
             echo "Options:"
-            echo "  --seq    Process jobs sequentially (default is parallel)"
+            echo "  --seq            Process jobs sequentially (default is parallel)"
+            echo "  --transf-to-orig Transform outputs back to original input space"
             exit 1
             ;;
         *)
@@ -51,11 +58,13 @@ done
 # Check if sufficient arguments remain after option parsing
 if [ $# -lt 3 ]; then
     echo "Error: Insufficient arguments provided."
-    echo "Usage: $0 [--seq] <INPUT_DIR> <OUTPUT_DIR> <SUBJECT1> [SUBJECT2] ..."
+    echo "Usage: $0 [--seq] [--transf-to-orig] <INPUT_DIR> <OUTPUT_DIR> <SUBJECT1> [SUBJECT2] ..."
     echo "Options:"
-    echo "  --seq    Process jobs sequentially (default is parallel)"
+    echo "  --seq            Process jobs sequentially (default is parallel)"
+    echo "  --transf-to-orig Transform outputs back to original input space"
     echo "Example: $0 /path/to/input /path/to/output sub-001 sub-002 sub-003"
     echo "Example: $0 --seq /path/to/input /path/to/output sub-001 sub-002 sub-003"
+    echo "Example: $0 --transf-to-orig /path/to/input /path/to/output sub-001 sub-002"
     exit 1
 fi
 
@@ -81,6 +90,7 @@ SLURM_SCRIPT="/data/u_kuegler_software/git/qsm/run_qsmxt/qsmxt_slurm_n.sh"
 echo "Input Directory: $INPUT_DIR"
 echo "Output Directory: $OUTPUT_DIR"
 echo "Processing Mode: $([ "$SEQUENTIAL" = true ] && echo "Sequential" || echo "Parallel")"
+echo "Transform to original space: $TRANSF_TO_ORIG"
 echo "Subjects to process: $@"
 echo "============================================="
 
@@ -118,16 +128,16 @@ for subj in "$@"; do
                 if [ "$SEQUENTIAL" = true ]; then
                     # Sequential processing: add dependency on previous job
                     if [ -z "$prev_jobid" ]; then
-                        jobid=$(sbatch -p ${SLURM_PARTITIONS} -x "drachenkopf" ${SLURM_SCRIPT} "$INPUT_DIR" "$OUTPUT_DIR" "$subj" "$session" | awk '{print $4}')
+                        jobid=$(sbatch -p ${SLURM_PARTITIONS} -x "drachenkopf" ${SLURM_SCRIPT} "$INPUT_DIR" "$OUTPUT_DIR" "$subj" "$session" "$TRANSF_TO_ORIG" | awk '{print $4}')
                         echo "  Submitted batch job $jobid for ${subj}/${session}"
                     else
-                        jobid=$(sbatch --dependency=afterany:$prev_jobid -p ${SLURM_PARTITIONS} -x "drachenkopf" ${SLURM_SCRIPT} "$INPUT_DIR" "$OUTPUT_DIR" "$subj" "$session" | awk '{print $4}')
+                        jobid=$(sbatch --dependency=afterany:$prev_jobid -p ${SLURM_PARTITIONS} -x "drachenkopf" ${SLURM_SCRIPT} "$INPUT_DIR" "$OUTPUT_DIR" "$subj" "$session" "$TRANSF_TO_ORIG" | awk '{print $4}')
                         echo "  Submitted batch job $jobid for ${subj}/${session} with dependency on job $prev_jobid"
                     fi
                     prev_jobid=$jobid
                 else
                     # Parallel processing: submit job without dependencies
-                    jobid=$(sbatch -p ${SLURM_PARTITIONS} -x "drachenkopf" ${SLURM_SCRIPT} "$INPUT_DIR" "$OUTPUT_DIR" "$subj" "$session" | awk '{print $4}')
+                    jobid=$(sbatch -p ${SLURM_PARTITIONS} -x "drachenkopf" ${SLURM_SCRIPT} "$INPUT_DIR" "$OUTPUT_DIR" "$subj" "$session" "$TRANSF_TO_ORIG" | awk '{print $4}')
                     echo "  Submitted batch job $jobid for ${subj}/${session}"
                 fi
                 ((total_jobs++))
@@ -148,16 +158,16 @@ for subj in "$@"; do
             if [ "$SEQUENTIAL" = true ]; then
                 # Sequential processing: add dependency on previous job
                 if [ -z "$prev_jobid" ]; then
-                    jobid=$(sbatch -p ${SLURM_PARTITIONS} -x "drachenkopf" ${SLURM_SCRIPT} "$INPUT_DIR" "$OUTPUT_DIR" "$subj" | awk '{print $4}')
+                    jobid=$(sbatch -p ${SLURM_PARTITIONS} -x "drachenkopf" ${SLURM_SCRIPT} "$INPUT_DIR" "$OUTPUT_DIR" "$subj" "" "$TRANSF_TO_ORIG" | awk '{print $4}')
                     echo "  Submitted batch job $jobid for ${subj} (no session)"
                 else
-                    jobid=$(sbatch --dependency=afterany:$prev_jobid -p ${SLURM_PARTITIONS} -x "drachenkopf" ${SLURM_SCRIPT} "$INPUT_DIR" "$OUTPUT_DIR" "$subj" | awk '{print $4}')
+                    jobid=$(sbatch --dependency=afterany:$prev_jobid -p ${SLURM_PARTITIONS} -x "drachenkopf" ${SLURM_SCRIPT} "$INPUT_DIR" "$OUTPUT_DIR" "$subj" "" "$TRANSF_TO_ORIG" | awk '{print $4}')
                     echo "  Submitted batch job $jobid for ${subj} (no session) with dependency on job $prev_jobid"
                 fi
                 prev_jobid=$jobid
             else
                 # Parallel processing: submit job without dependencies
-                jobid=$(sbatch -p ${SLURM_PARTITIONS} -x "drachenkopf" ${SLURM_SCRIPT} "$INPUT_DIR" "$OUTPUT_DIR" "$subj" | awk '{print $4}')
+                jobid=$(sbatch -p ${SLURM_PARTITIONS} -x "drachenkopf" ${SLURM_SCRIPT} "$INPUT_DIR" "$OUTPUT_DIR" "$subj" "" "$TRANSF_TO_ORIG" | awk '{print $4}')
                 echo "  Submitted batch job $jobid for ${subj} (no session)"
             fi
             ((total_jobs++))
