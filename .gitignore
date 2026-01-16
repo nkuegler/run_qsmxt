@@ -1,3 +1,7 @@
 logs
 qsm_weighted_av_kerrin.m
 QSM_weighted_av_leo.m
+uv.lock
+pyproject.toml
+sform_toPDw_manTest.py
+coreg_r2_slab_slurm.sh
