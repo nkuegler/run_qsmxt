@@ -21,9 +21,20 @@
 #   Coregistered file with _desc-coregToPDw suffix inserted before _MPM
 #   Example: input_acq-T1w_MPM_Chimap.nii → output_acq-T1w_desc-coregToPDw_MPM_Chimap.nii
 #
+# OPERATIONS PERFORMED:
+#   1. Execute coregistration using the SPM batch created in coreg_toPDw.m
+#   2. Move result to output directory
+#   3. Create comprehensive JSON sidecar metadata file
+#
+# EXAMPLE:
+#   sbatch coreg_toPDw_slurm.sh \
+#     /data/input/moving_image.nii \
+#     /data/input/reference_image.nii \
+#     /data/output/coregistered
 # NOTES:
 #   - Uses SPM12 rigid body transformation (6 DOF)
 #   - Overwrites existing files if output already exists
+#   - Creates comprehensive JSON sidecar with processing metadata
 #   - Visual inspection of coregistration quality recommended
 #
 # AUTHOR:
@@ -64,7 +75,7 @@ fi
 
 ### Run MATLAB/SPM coregistration
 echo "Starting coregistration..."
-MATLAB -v 24.2 matlab -batch "coreg_r2_slab('$moving_img','$reference_img');exit" -sd /data/u_kuegler_software/git/r2_processing/r2prime_calculation
+MATLAB -v 24.2 matlab -batch "coreg_toPDw('$moving_img','$reference_img');exit" -sd /data/u_kuegler_software/git/qsm/run_qsmxt
 matlab_exit_code=$?
 
 # Check if MATLAB execution was successful
@@ -101,22 +112,18 @@ if [ "$coregistered_result" = "$output_file" ]; then
     echo "Coregistered result is already in output directory."
     echo "Coregistration completed successfully. Result available at:"
     echo "   $output_file"
-elif [ -f "$output_file" ]; then
-    echo "File already exists in output directory: $output_file"
-    echo "Removing old version and moving new result..."
-    rm -f "$output_file"
-    rm -f "${output_file%.nii}.json"
-    mv "$coregistered_result" "$output_dir"
-    if [ $? -eq 0 ]; then
-        echo "Coregistration completed successfully. Result saved to:" 
-        echo "   $output_file"
-    else
-        echo "Error: Failed to move coregistered result"
-        exit 1
-    fi
 else
+    # Check if output file already exists
+    if [ -f "$output_file" ]; then
+        echo "File already exists in output directory: $output_file"
+        echo "Removing old version and moving new result..."
+        rm -f "$output_file"
+        rm -f "${output_file%.nii}.json"
+    else
+        echo "Moving coregistered result to $output_dir"
+    fi
+
     # Move the coregistered result to the specified output location
-    echo "Moving coregistered result to $output_dir"
     mv "$coregistered_result" "$output_dir"
     # Check if the move was successful
     if [ $? -eq 0 ]; then
@@ -127,3 +134,50 @@ else
         exit 1
     fi
 fi
+
+# Create JSON sidecar file (common for all cases)
+echo "Creating JSON sidecar file..."
+JSON_FILE="${output_file%.nii}.json"
+TIMESTAMP=$(date -Iseconds)
+
+cat > "${JSON_FILE}" << EOF
+{
+  "Description": "Coregistered image aligned to reference space using SPM",
+  "Sources": {
+    "moving_image": "${moving_img}",
+    "reference_image": "${reference_img}"
+  },
+  "ProcessingSteps": [
+    "SPM coregistration of moving image to reference space"
+  ],
+  "ProcessingParameters": {
+    "CoregistrationMethod": "SPM Coregister (estimate and reslice)",
+    "TransformationType": "Rigid body (6 DOF) with image reslicing",
+    "EstimationOptions": {
+      "ObjectiveFunction": "Normalized Mutual Information",
+      "Separation": "[4 2 1 0.6]",
+      "Tolerances": "[0.02 0.02 0.02 0.001 0.001 0.001 0.01 0.01 0.01 0.001 0.001 0.001]",
+      "HistogramSmoothing": "[7 7]
+    },
+    "ResliceOptions": {
+      "Interpolation": "4th Degree B-Spline",
+      "Wrapping": "No wrap",
+      "Masking": "No mask", 
+      "FileNamePrefix": "coreg_"
+    },
+  },
+  "SoftwareInformation": {
+    "MATLAB": "R2024b",
+    "SPM": "SPM12",
+    "ProcessingScript": "coreg_toPDw_slurm.sh",
+    "MATLABFunction": "coreg_toPDw.m"
+  },
+  "ProcessingTimestamp": "${TIMESTAMP}",
+  "Units": "Hz",
+  "QualityCheck": "Visual inspection recommended"
+}
+EOF
+
+echo "JSON sidecar created: ${JSON_FILE}"
+
+
