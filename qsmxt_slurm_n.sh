@@ -6,14 +6,14 @@
 # This script runs QSMxT (Quantitative Susceptibility Mapping) processing
 # on a SLURM cluster for a single subject/session.
 #
-# Usage: sbatch qsmxt_slurm_n.sh <INPUT_DIR> <OUTPUT_DIR> <SUBJECT> [SESSION] [TRANSF_TO_ORIG]
+# Usage: sbatch qsmxt_slurm_n.sh <INPUT_DIR> <OUTPUT_DIR> <SUBJECT> [SESSION] [TRANSFORM_TO_ORIG]
 #
 # Arguments:
 #   INPUT_DIR      - Path to input BIDS directory containing raw data
 #   OUTPUT_DIR     - Path to output directory for processed results
 #   SUBJECT        - Subject identifier (e.g., sub-001)
 #   SESSION        - (Optional) Session identifier (e.g., ses-01)
-#   TRANSF_TO_ORIG - (Optional) Set to 'true' to transform outputs back to original space
+#   TRANSFORM_TO_ORIG - (Optional) Set to 'true' to transform outputs back to original space
 #
 # The script processes GRE data using QSMxT with the following features:
 #   - QSM reconstruction using PDF background field removal
@@ -23,7 +23,7 @@
 # the directory containing the final results is moved to the specified output 
 # location.
 #
-# If TRANSF_TO_ORIG is set to 'true', all output .nii/.nii.gz files will be
+# If TRANSFORM_TO_ORIG is set to 'true', all output .nii/.nii.gz files will be
 # transformed back to their corresponding original input space using FSL's flirt.
 
 
@@ -40,7 +40,7 @@ INPUT_DIR="$1"
 OUTPUT_DIR="$2"
 SUBJECT="$3"
 SESSION="$4"  # Optional - may be empty
-TRANSF_TO_ORIG="${5:-false}"  # Optional - defaults to false
+TRANSFORM_TO_ORIG="${5:-false}"  # Optional - defaults to false
 
 echo "Input Directory: ${INPUT_DIR}"
 echo "Output Directory: ${OUTPUT_DIR}"
@@ -52,7 +52,7 @@ else
     echo "Session: Not specified"
     SUPPL_DIR=${OUTPUT_DIR}/Supplementary/${SUBJECT}
 fi
-echo "Transform to original space: ${TRANSF_TO_ORIG}"
+echo "Transform to original space: ${TRANSFORM_TO_ORIG}"
 echo "--------"
 
 mkdir -p ${SUPPL_DIR}
@@ -72,7 +72,6 @@ if [[ -n "$SESSION" ]]; then
         --do_qsm \
         --do_swi \
         --do_r2starmap \
-        --do_template \
         --labels_file '/data/u_kuegler_software/miniforge3/envs/qsmxt8/lib/python3.8/site-packages/qsmxt/aseg_labels.csv' \
         --subjects "${SUBJECT}" \
         --sessions "${SESSION}" \
@@ -91,7 +90,6 @@ else
         --do_qsm \
         --do_swi \
         --do_r2starmap \
-        --do_template \
         --labels_file '/data/u_kuegler_software/miniforge3/envs/qsmxt8/lib/python3.8/site-packages/qsmxt/aseg_labels.csv' \
         --subjects "${SUBJECT}" \
         --recs rec-loraksRsos \
@@ -110,7 +108,7 @@ fi
 
 if [ $? -eq 0 ]; then
     # Transform outputs back to original space if requested
-    if [ "$TRANSF_TO_ORIG" = "true" ]; then
+    if [ "$TRANSFORM_TO_ORIG" = "true" ]; then
         echo "--------"
         echo "Transforming outputs back to original space..."
         echo "--------"
@@ -119,15 +117,15 @@ if [ $? -eq 0 ]; then
         if [[ -n "$SESSION" ]]; then
             PROCESSED_ANAT_DIR="${SUPPL_DIR}/${SUBJECT}/${SESSION}/anat"
             INPUT_SUBJ_DIR="${INPUT_DIR}/${SUBJECT}/${SESSION}/anat"
-            TRANSF_OUTPUT_DIR="${SUPPL_DIR}/${SUBJECT}/${SESSION}/transf_to_orig"
+            TRANSFORM_TO_ORIG_OUTPUT_DIR="${SUPPL_DIR}/${SUBJECT}/${SESSION}/transform_to_orig"
         else
             PROCESSED_ANAT_DIR="${SUPPL_DIR}/${SUBJECT}/anat"
             INPUT_SUBJ_DIR="${INPUT_DIR}/${SUBJECT}/anat"
-            TRANSF_OUTPUT_DIR="${SUPPL_DIR}/${SUBJECT}/transf_to_orig"
+            TRANSFORM_TO_ORIG_OUTPUT_DIR="${SUPPL_DIR}/${SUBJECT}/transform_to_orig"
         fi
         
         # Create transformation output directory
-        mkdir -p "${TRANSF_OUTPUT_DIR}"
+        mkdir -p "${TRANSFORM_TO_ORIG_OUTPUT_DIR}"
         
         # Find all .nii and .nii.gz files in processed directory
         while IFS= read -r -d '' output_file; do
@@ -161,13 +159,13 @@ if [ $? -eq 0 ]; then
             SCWRAP fsl $FSL_VERSION flirt \
                 -in "$output_file" \
                 -ref "$original_file" \
-                -out "${TRANSF_OUTPUT_DIR}/${filename}" \
+                -out "${TRANSFORM_TO_ORIG_OUTPUT_DIR}/${filename}" \
                 -interp spline \
                 -applyxfm \
                 -usesqform
             
             if [ $? -eq 0 ]; then
-                echo "    Success: Created ${TRANSF_OUTPUT_DIR}/${filename}"
+                echo "    Success: Created ${TRANSFORM_TO_ORIG_OUTPUT_DIR}/${filename}"
             else
                 echo "    Error: Failed to transform $filename"
             fi

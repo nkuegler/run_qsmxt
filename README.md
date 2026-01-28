@@ -98,11 +98,11 @@ The repository includes scripts for batch brain extraction using FreeSurfer's `m
 # Example synthstrip
 
 ```
-subjs=$(find /data/pt_02262/data/liege_data/bids/derivatives/LORAKS/derivatives/LCPCA_distCorr/ -maxdepth 1 -type d -name 'sub-*' -exec basename {} \; | tr '\n' ' ')
+subjs=$(find /data/pt_02262/data/liege_data/bids/derivatives/LORAKS/derivatives/LCPCA_distCorr/ -maxdepth 1 -type d -name 'sub-*' -exec basename {} \; | sort -V | tr '\n' ' ')
 
 ./call_synthstrip.sh --no-csf --holefill 7 /data/pt_02262/data/liege_data/bids/derivatives/LORAKS/derivatives/LCPCA_distCorr/ /data/pt_02262/data/liege_data/bids/derivatives/LORAKS/derivatives/LCPCA_distCorr/derivatives/synthstrip/ $subjs
 
-./call_qsmxt_n.sh /data/pt_02262/data/liege_data/bids/derivatives/LORAKS/derivatives/LCPCA_distCorr/ /data/pt_02262/data/liege_data/bids/derivatives/LORAKS/derivatives/QSMxT/20251228_qsmxt_pdf_synthstripFilled/ $subjs 
+./call_qsmxt_n.sh --transform-to-orig /data/pt_02262/data/liege_data/bids/derivatives/LORAKS/derivatives/LCPCA_distCorr/ /data/pt_02262/data/liege_data/bids/derivatives/LORAKS/derivatives/QSMxT/20251228_qsmxt_pdf_synthstripFilled/ $subjs 
 ```
 
 ## Spatial Transformations
@@ -111,12 +111,12 @@ The repository includes scripts for transforming QSMxT outputs to different spat
 
 ### Transform to Original Space
 
-Transform QSMxT outputs back to the original input acquisition space using `transform_to_orig.sh` or the `--transf-to-orig` flag in `call_qsmxt_n.sh`.
+Transform QSMxT outputs back to the original input acquisition space using `transform_to_orig.sh` or the `--transform-to-orig` flag in `call_qsmxt_n.sh`.
 
 **Integrated workflow (recommended):**
 ```bash
 # Transform outputs during QSMxT processing
-./call_qsmxt_n.sh --transf-to-orig <INPUT_DIR> <OUTPUT_DIR> <SUBJECTS...>
+./call_qsmxt_n.sh --transform-to-orig <INPUT_DIR> <OUTPUT_DIR> <SUBJECTS...>
 ```
 
 **Standalone script:**
@@ -125,7 +125,7 @@ Transform QSMxT outputs back to the original input acquisition space using `tran
 ./deprecated_transform_to_orig.sh <QSMXT_OUTPUT_DIR> <ORIGINAL_INPUT_DIR>
 ```
 
-Creates `transf_to_orig/` subdirectories containing outputs aligned to original acquisition space. Uses FSL flirt with sform-based transformation.
+Creates `transform_to_orig/` subdirectories containing outputs aligned to original acquisition space. Uses FSL flirt with sform-based transformation.
 
 ### Transform to MPM Space
 
@@ -135,9 +135,9 @@ Transform Chimap outputs to co-registered MPM reference space using `deprecated_
 ./deprecated_transform_to_mpm.sh <QSMXT_OUTPUT_DIR> <MPM_REFERENCE_DIR>
 ```
 
-Creates `transf_to_mpm/` subdirectories with T1w and MTw Chimaps aligned to their corresponding co-registered references. Uses FSL flirt with spline interpolation.
+Creates `transform_to_mpm/` subdirectories with T1w and MTw Chimaps aligned to their corresponding co-registered references. Uses FSL flirt with spline interpolation.
 
-> **Note:** The `transform_to_orig` functionality is integrated into `qsmxt_slurm_n.sh` via the `--transf-to-orig` flag. The `deprecated_transform_to_mpm.sh` script is currently standalone but may be integrated as a separate SLURM job in future versions (see following note for concerns).
+> **Note:** The `transform_to_orig` functionality is integrated into `qsmxt_slurm_n.sh` via the `--transform-to-orig` flag. The `deprecated_transform_to_mpm.sh` script is currently standalone but may be integrated as a separate SLURM job in future versions (see following note for concerns).
 
 
 > **Note:** The transformation to the mpm space using the original coregistrations of the hMRI toolbox (from MPMCalc directory) turned out to be problematic as the resulting sforms/qforms of the T1w and MTw Chimaps differ from the PDw Chimap (MPM reference space). This makes it more difficult to process and inspect them further. 

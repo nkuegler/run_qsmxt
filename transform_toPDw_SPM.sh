@@ -9,14 +9,14 @@
 # Usage: ./transform_toPDw_SPM.sh <INPUT_DIR>
 #
 # Arguments:
-#   INPUT_DIR - Path to directory containing Chimap files in transf_to_orig subdirectories
+#   INPUT_DIR - Path to directory containing Chimap files in transform_to_orig subdirectories
 #
 # Directory structure:
-#   INPUT_DIR: sub-XXX/ses-XX/anat/transf_to_orig/*_MPM_Chimap.nii
+#   INPUT_DIR: sub-XXX/ses-XX/anat/transform_to_orig/*_MPM_Chimap.nii
 #
 # The script will:
 #   1. Find all subjects and sessions in the input directory
-#   2. For each subject/session, identify T1w, MTw, and PDw Chimaps in transf_to_orig/
+#   2. For each subject/session, identify T1w, MTw, and PDw Chimaps in transform_to_orig/
 #   3. Submit SLURM jobs to coregister T1w and MTw Chimaps to PDw Chimap
 #   4. Output files will be saved in coreg_toPDw/ subdirectory with _desc-coregToPDw suffix
 #
@@ -31,7 +31,7 @@ if [ $# -ne 1 ]; then
     echo "Usage: $0 <INPUT_DIR>"
     echo ""
     echo "Arguments:"
-    echo "  INPUT_DIR - Path to directory with Chimaps (sub-XXX/ses-XX/anat/transf_to_orig/)"
+    echo "  INPUT_DIR - Path to directory with Chimaps (sub-XXX/ses-XX/anat/transform_to_orig/)"
     echo ""
     echo "Example: $0 /path/to/qsmxt_output"
     exit 1
@@ -89,11 +89,11 @@ for subj_dir in "${INPUT_DIR}"/sub-*; do
         
         echo "  Processing session: $session"
         
-        # transf_to_orig directory containing Chimaps
-        transf_to_orig_dir="${session_dir}/anat/transf_to_orig"
+        # transform_to_orig directory containing Chimaps
+        transform_to_orig_dir="${session_dir}/anat/transform_to_orig"
         
-        if [ ! -d "$transf_to_orig_dir" ]; then
-            echo "    Warning: transf_to_orig directory not found: $transf_to_orig_dir"
+        if [ ! -d "$transform_to_orig_dir" ]; then
+            echo "    Warning: transform_to_orig directory not found: $transform_to_orig_dir"
             continue
         fi
         
@@ -102,10 +102,10 @@ for subj_dir in "${INPUT_DIR}"/sub-*; do
         mkdir -p "$coreg_dir"
         
         # Find PDw Chimap (reference)
-        pdw_chimap=$(find "${transf_to_orig_dir}" -maxdepth 1 -type f \( -name "${subj}*acq-PDw*MPM_Chimap.nii" -o -name "${subj}*acq-PDw*MPM_Chimap.nii.gz" \) | head -n 1)
+        pdw_chimap=$(find "${transform_to_orig_dir}" -maxdepth 1 -type f \( -name "${subj}*acq-PDw*MPM_Chimap.nii" -o -name "${subj}*acq-PDw*MPM_Chimap.nii.gz" \) | head -n 1)
         
         if [ -z "$pdw_chimap" ]; then
-            echo "    Warning: PDw Chimap not found in $transf_to_orig_dir"
+            echo "    Warning: PDw Chimap not found in $transform_to_orig_dir"
             continue
         fi
         
@@ -114,7 +114,7 @@ for subj_dir in "${INPUT_DIR}"/sub-*; do
         # Process T1w and MTw Chimaps
         for acq_type in T1w MTw; do
             # Find the Chimap for this acquisition type
-            moving_chimap=$(find "${transf_to_orig_dir}" -maxdepth 1 -type f \( -name "${subj}*acq-${acq_type}*MPM_Chimap.nii" -o -name "${subj}*acq-${acq_type}*MPM_Chimap.nii.gz" \) | head -n 1)
+            moving_chimap=$(find "${transform_to_orig_dir}" -maxdepth 1 -type f \( -name "${subj}*acq-${acq_type}*MPM_Chimap.nii" -o -name "${subj}*acq-${acq_type}*MPM_Chimap.nii.gz" \) | head -n 1)
             
             if [ -z "$moving_chimap" ]; then
                 echo "    Warning: ${acq_type} Chimap not found, skipping"

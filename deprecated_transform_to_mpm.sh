@@ -19,14 +19,14 @@
 #   REF_DIR   - Path to directory containing co-registered MPM reference files 
 #
 # Directory structures:
-#   INPUT_DIR:  sub-XXX/ses-XX/anat/transf_to_orig/*_MPM_Chimap.nii or *.nii.gz
+#   INPUT_DIR:  sub-XXX/ses-XX/anat/transform_to_orig/*_MPM_Chimap.nii or *.nii.gz
 #               (QSMxT Chimap outputs transformed back to original space)
 #   REF_DIR:    sub-XXX/ses-XX/anat/Supplementary/MPMCalc/*acq-{T1w,MTw}*coregistered*.nii
 #               (Original acquisitions co-registered to PDw space via SPM)
 #
 # The script will:
 #   1. Find all subjects and sessions in the input directory
-#   2. For each subject/session, create a transf_to_mpm subdirectory
+#   2. For each subject/session, create a transform_to_mpm subdirectory
 #   3. Transform T1w and MTw Chimap files to match their corresponding co-registered references
 #   4. Use acquisition-specific references (T1w Chimap → T1w coregistered reference, etc.)
 #
@@ -105,18 +105,18 @@ for subj_dir in "${INPUT_DIR}"/sub-*; do
         
         echo "  Processing session: $session"
         
-        # Anatomical directory with transf_to_orig subdirectory
+        # Anatomical directory with transform_to_orig subdirectory
         anat_dir="${session_dir}/anat"
-        transf_to_orig_dir="${anat_dir}/transf_to_orig"
+        transform_to_orig_dir="${anat_dir}/transform_to_orig"
         
-        if [ ! -d "$transf_to_orig_dir" ]; then
-            echo "    Warning: transf_to_orig directory not found: $transf_to_orig_dir"
+        if [ ! -d "$transform_to_orig_dir" ]; then
+            echo "    Warning: transform_to_orig directory not found: $transform_to_orig_dir"
             continue
         fi
         
         # Create transformation output directory
-        transf_dir="${anat_dir}/transf_to_mpm"
-        mkdir -p "$transf_dir"
+        transform_to_mpm_dir="${anat_dir}/transform_to_mpm"
+        mkdir -p "$transform_to_mpm_dir"
         
         # Corresponding reference directory
         ref_mpm_dir="${REF_DIR}/${subj}/${session}/anat/Supplementary/MPMCalc"
@@ -160,20 +160,20 @@ for subj_dir in "${INPUT_DIR}"/sub-*; do
             SCWRAP fsl $FSL_VERSION flirt \
                 -in "$input_file" \
                 -ref "$ref_file" \
-                -out "${transf_dir}/${filename}" \
+                -out "${transform_to_mpm_dir}/${filename}" \
                 -interp spline \
                 -applyxfm \
                 -usesqform 2>&1 | grep -v "^$"
             
             if [ ${PIPESTATUS[0]} -eq 0 ]; then
-                echo "      Success: ${transf_dir}/${filename}"
+                echo "      Success: ${transform_to_mpm_dir}/${filename}"
                 ((total_transformed++))
             else
                 echo "      Error: Failed to transform $filename"
                 ((total_errors++))
             fi
             
-        done < <(find "${transf_to_orig_dir}" -maxdepth 1 -type f \( -name "*MPM_Chimap.nii" -o -name "*MPM_Chimap.nii.gz" \) -print0)
+        done < <(find "${transform_to_orig_dir}" -maxdepth 1 -type f \( -name "*MPM_Chimap.nii" -o -name "*MPM_Chimap.nii.gz" \) -print0)
         
     done
 done

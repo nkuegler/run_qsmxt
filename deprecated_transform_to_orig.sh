@@ -14,7 +14,7 @@
 #
 # The script will:
 #   1. Find all subjects and sessions in the output directory
-#   2. For each subject/session, create a transf_to_orig subdirectory
+#   2. For each subject/session, create a transform_to_orig subdirectory
 #   3. Transform all .nii and .nii.gz files to match their corresponding input space
 #   4. Use acquisition type (PDw, MTw, T1w) to match output to input reference files
 #
@@ -97,8 +97,8 @@ for subj_dir in "${INPUT_DIR}"/sub-*; do
         fi
         
         # Create transformation output directory
-        transf_dir="${anat_dir}/transf_to_orig"
-        mkdir -p "$transf_dir"
+        transform_dir="${anat_dir}/transform_to_orig"
+        mkdir -p "$transform_dir"
         
         # Corresponding input directory
         input_anat_dir="${REF_DIR}/${subj}/${session}/anat"
@@ -142,18 +142,18 @@ for subj_dir in "${INPUT_DIR}"/sub-*; do
             SCWRAP fsl $FSL_VERSION flirt \
                 -in "$output_file" \
                 -ref "$original_file" \
-                -out "${transf_dir}/${filename}" \
+                -out "${transform_dir}/${filename}" \
                 -interp spline \
                 -applyxfm \
                 -usesqform 2>&1 | grep -v "^$"
             
             if [ ${PIPESTATUS[0]} -eq 0 ]; then
                 # Unzip the output file if it was created as .nii.gz
-                if [ -f "${transf_dir}/${filename}.gz" ]; then
-                    gunzip -f "${transf_dir}/${filename}.gz"
-                    echo "      Success (unzipped): ${transf_dir}/${filename}"
+                if [ -f "${transform_dir}/${filename}.gz" ]; then
+                    gunzip -f "${transform_dir}/${filename}.gz"
+                    echo "      Success (unzipped): ${transform_dir}/${filename}"
                 else
-                    echo "      Success: ${transf_dir}/${filename}"
+                    echo "      Success: ${transform_dir}/${filename}"
                 fi
                 ((total_transformed++))
             else

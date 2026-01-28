@@ -6,14 +6,14 @@
 # This script runs QSMxT (Quantitative Susceptibility Mapping) processing
 # on a SLURM cluster for a single subject/session.
 #
-# Usage: sbatch qsmxt_slurm_infantdata.sh <INPUT_DIR> <OUTPUT_DIR> <SUBJECT> [SESSION] [TRANSF_TO_ORIG]
+# Usage: sbatch qsmxt_slurm_infantdata.sh <INPUT_DIR> <OUTPUT_DIR> <SUBJECT> [SESSION] [TRANSFORM_TO_ORIG]
 #
 # Arguments:
 #   INPUT_DIR      - Path to input BIDS directory containing raw data
 #   OUTPUT_DIR     - Path to output directory for processed results
 #   SUBJECT        - Subject identifier (e.g., sub-001)
 #   SESSION        - (Optional) Session identifier (e.g., ses-01)
-#   TRANSF_TO_ORIG - (Optional) NOT IMPLEMENTED YET - placeholder for future functionality
+#   TRANSFORM_TO_ORIG - (Optional) NOT IMPLEMENTED YET - placeholder for future functionality
 #
 # The script processes GRE data using QSMxT with the following features:
 #   - QSM reconstruction using PDF background field removal
@@ -23,7 +23,7 @@
 # the directory containing the final results is moved to the specified output 
 # location.
 #
-# NOTE: The TRANSF_TO_ORIG flag is accepted but not functional in this script yet.
+# NOTE: The TRANSFORM_TO_ORIG flag is accepted but not functional in this script yet.
 
 
 
@@ -37,7 +37,7 @@ INPUT_DIR="$1"
 OUTPUT_DIR="$2"
 SUBJECT="$3"
 SESSION="$4"  # Optional - may be empty
-TRANSF_TO_ORIG="${5:-false}"  # Optional - defaults to false (NOT IMPLEMENTED)
+TRANSFORM_TO_ORIG="${5:-false}"  # Optional - defaults to false (NOT IMPLEMENTED)
 
 echo "Input Directory: ${INPUT_DIR}"
 echo "Output Directory: ${OUTPUT_DIR}"
@@ -49,8 +49,8 @@ else
     echo "Session: Not specified"
     SUPPL_DIR=${OUTPUT_DIR}/Supplementary/${SUBJECT}
 fi
-if [ "$TRANSF_TO_ORIG" = "true" ]; then
-    echo "Transform to original space: ${TRANSF_TO_ORIG} (NOT IMPLEMENTED)"
+if [ "$TRANSFORM_TO_ORIG" = "true" ]; then
+    echo "Transform to original space: ${TRANSFORM_TO_ORIG} (NOT IMPLEMENTED)"
 fi
 echo "--------"
 
