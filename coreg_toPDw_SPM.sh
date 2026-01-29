@@ -45,8 +45,9 @@ if [ ! -d "$INPUT_DIR" ]; then
     exit 1
 fi
 
-# SLURM script path
+# SLURM script and partitions
 SLURM_SCRIPT="/data/u_kuegler_software/git/qsm/run_qsmxt/coreg_toPDw_slurm.sh"
+SLURM_PARTITIONS="short,group_servers,gr_weiskopf"
 
 if [ ! -f "$SLURM_SCRIPT" ]; then
     echo "Error: SLURM script not found: $SLURM_SCRIPT"
@@ -128,7 +129,7 @@ for subj_dir in "${INPUT_DIR}"/sub-*; do
             echo "      Output dir: $coreg_dir"
             
             # Submit SLURM job
-            job_id=$(sbatch --parsable "$SLURM_SCRIPT" "$moving_chimap" "$pdw_chimap" "$coreg_dir")
+            job_id=$(sbatch -p ${SLURM_PARTITIONS} --parsable "$SLURM_SCRIPT" "$moving_chimap" "$pdw_chimap" "$coreg_dir")
             
             if [ $? -eq 0 ]; then
                 echo "      Job submitted: $job_id"

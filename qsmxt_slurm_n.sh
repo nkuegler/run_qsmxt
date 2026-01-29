@@ -28,7 +28,7 @@
 
 
 
-#SBATCH -c 60	
+#SBATCH -c 36
 #SBATCH --mem 200G	
 #SBATCH --time 180	
 #SBATCH -o /data/u_kuegler_software/git/qsm/run_qsmxt/logs/%j_qsmxt.out	# redirect the output
@@ -117,11 +117,11 @@ if [ $? -eq 0 ]; then
         if [[ -n "$SESSION" ]]; then
             PROCESSED_ANAT_DIR="${SUPPL_DIR}/${SUBJECT}/${SESSION}/anat"
             INPUT_SUBJ_DIR="${INPUT_DIR}/${SUBJECT}/${SESSION}/anat"
-            TRANSFORM_TO_ORIG_OUTPUT_DIR="${SUPPL_DIR}/${SUBJECT}/${SESSION}/transform_to_orig"
+            TRANSFORM_TO_ORIG_OUTPUT_DIR="${SUPPL_DIR}/${SUBJECT}/${SESSION}/anat/transform_to_orig"
         else
             PROCESSED_ANAT_DIR="${SUPPL_DIR}/${SUBJECT}/anat"
             INPUT_SUBJ_DIR="${INPUT_DIR}/${SUBJECT}/anat"
-            TRANSFORM_TO_ORIG_OUTPUT_DIR="${SUPPL_DIR}/${SUBJECT}/transform_to_orig"
+            TRANSFORM_TO_ORIG_OUTPUT_DIR="${SUPPL_DIR}/${SUBJECT}/anat/transform_to_orig"
         fi
         
         # Create transformation output directory
