@@ -151,7 +151,7 @@ Creates `transform_to_mpm/` subdirectories with T1w and MTw Chimaps aligned to t
 
 
 > **Note:** The transformation to the mpm space using the original coregistrations of the hMRI toolbox (from MPMCalc directory) turned out to be problematic as the resulting sforms/qforms of the T1w and MTw Chimaps differ from the PDw Chimap (MPM reference space). This makes it more difficult to process and inspect them further. 
-> To avoid this, I instead run a separate rigid-body registration using SPM to align the T1w and MTw Chimaps to the PDw Chimap (see `transform_toPDw_SPM.sh`)."
+> To avoid this, I instead run a separate rigid-body registration using SPM to align the T1w and MTw Chimaps to the PDw Chimap (see `coreg_toPDw_SPM.sh`)."
 
 
 

@@ -6,7 +6,7 @@
 # This script submits SLURM jobs to coregister T1w and MTw Chimap files to PDw Chimap
 # reference space using SPM12 rigid body transformation.
 #
-# Usage: ./transform_toPDw_SPM.sh <INPUT_DIR>
+# Usage: ./coreg_toPDw_SPM.sh <INPUT_DIR>
 #
 # Arguments:
 #   INPUT_DIR - Path to directory containing Chimap files in transform_to_orig subdirectories
