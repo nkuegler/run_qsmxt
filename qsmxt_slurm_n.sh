@@ -127,6 +127,10 @@ if [ $? -eq 0 ]; then
         # Create transformation output directory
         mkdir -p "${TRANSFORM_TO_ORIG_OUTPUT_DIR}"
         
+        # Initialize counters
+        total_transformed=0
+        total_errors=0
+        
         # Find all .nii and .nii.gz files in processed directory
         while IFS= read -r -d '' output_file; do
             filename=$(basename "$output_file")
@@ -160,20 +164,31 @@ if [ $? -eq 0 ]; then
                 -in "$output_file" \
                 -ref "$original_file" \
                 -out "${TRANSFORM_TO_ORIG_OUTPUT_DIR}/${filename}" \
-                -interp spline \
                 -applyxfm \
                 -usesqform
+            # -interp spline \ # destroys R2star transformation even though interpolation shouldnt be necessary at all here (only 90 degree rotations and flips)
+
             
             if [ $? -eq 0 ]; then
-                echo "    Success: Created ${TRANSFORM_TO_ORIG_OUTPUT_DIR}/${filename}"
+                # Unzip the output file if it was created as .nii.gz
+                if [ -f "${TRANSFORM_TO_ORIG_OUTPUT_DIR}/${filename}.gz" ]; then
+                    gunzip -f "${TRANSFORM_TO_ORIG_OUTPUT_DIR}/${filename}.gz"
+                    echo "      Success (unzipped): ${TRANSFORM_TO_ORIG_OUTPUT_DIR}/${filename}"
+                else
+                    echo "      Success: ${TRANSFORM_TO_ORIG_OUTPUT_DIR}/${filename}"
+                fi
+                ((total_transformed++))
             else
-                echo "    Error: Failed to transform $filename"
+                echo "      Error: Failed to transform $filename"
+                ((total_errors++))
             fi
             
         done < <(find "${PROCESSED_ANAT_DIR}" -type f \( -name "*.nii" -o -name "*.nii.gz" \) -print0)
         
         echo "--------"
         echo "Transformation to original space completed"
+        echo "Total files transformed: ${total_transformed}"
+        echo "Total errors: ${total_errors}"
         echo "--------"
     fi
     
