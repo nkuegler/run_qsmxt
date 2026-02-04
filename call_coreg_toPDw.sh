@@ -7,7 +7,7 @@
 # reference space using SPM12 rigid body transformation, then automatically averages all
 # three Chimaps (PDw reference + coregistered T1w + coregistered MTw) using FSL.
 #
-# Usage: ./coreg_toPDw_SPM.sh <INPUT_DIR>
+# Usage: ./call_coreg_toPDw.sh <INPUT_DIR>
 #
 # Arguments:
 #   INPUT_DIR - Path to directory containing Chimap files in transform_to_orig subdirectories

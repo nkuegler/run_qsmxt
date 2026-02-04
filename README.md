@@ -151,7 +151,7 @@ Creates `transform_to_mpm/` subdirectories with T1w and MTw Chimaps aligned to t
 
 
 > **Note:** The transformation to the mpm space using the original coregistrations of the hMRI toolbox (from MPMCalc directory) turned out to be problematic as the resulting sforms/qforms of the T1w and MTw Chimaps differ from the PDw Chimap (MPM reference space). This makes it more difficult to process and inspect them further. 
-> To avoid this, I instead run a separate rigid-body registration using SPM to align the T1w and MTw Chimaps to the PDw Chimap (see `coreg_toPDw_SPM.sh`)."
+> To avoid this, I instead run a separate rigid-body registration using SPM to align the T1w and MTw Chimaps to the PDw Chimap (see `call_coreg_toPDw.sh`)."
 
 ## Chimap Coregistration and Averaging
 
@@ -161,7 +161,7 @@ The repository includes scripts for coregistering multi-contrast Chimaps (magnet
 
 **Usage:**
 ```bash
-./coreg_toPDw_SPM.sh <INPUT_DIR>
+./call_coreg_toPDw.sh <INPUT_DIR>
 ```
 
 **What it does:**
@@ -180,7 +180,7 @@ The repository includes scripts for coregistering multi-contrast Chimaps (magnet
 
 **Example:**
 ```bash
-./coreg_toPDw_SPM.sh /data/pt_02262/data/TH_bids/bids/derivatives/LORAKS/derivatives/QSMxT/20260202_pdf_phaseMask2/
+./call_coreg_toPDw.sh /data/pt_02262/data/TH_bids/bids/derivatives/LORAKS/derivatives/QSMxT/20260202_pdf_phaseMask2/
 ```
 
 **Job dependencies:** The averaging job (`average_chimaps_slurm.sh`) only runs after both coregistration jobs complete successfully, ensuring all required files exist before averaging.

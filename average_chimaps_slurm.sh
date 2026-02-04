@@ -24,7 +24,7 @@
 #   <subject>_<session>_merged_Chimap.nii - Concatenated 4D volume of all three Chimaps
 #   <subject>_<session>_mean_Chimap.nii     - Temporal mean across the three Chimaps
 #
-# This script is typically called as a dependent SLURM job by coreg_toPDw_SPM.sh after
+# This script is typically called as a dependent SLURM job by call_coreg_toPDw.sh after
 # both coregistration jobs complete successfully.
 
 # Check arguments
