@@ -6,7 +6,7 @@
 # This script transforms already processed QSMxT outputs back to their original
 # input space using FSL's flirt with sform-based transformation.
 #
-# Usage: ./transform_to_orig.sh <INPUT_DIR> <REF_DIR>
+# Usage: ./deprecated_transform_to_orig.sh <INPUT_DIR> <REF_DIR>
 #
 # Arguments:
 #   INPUT_DIR - Path to directory containing files to transform (sub-XXX/ses-XX/anat/*.nii)
@@ -86,6 +86,7 @@ for subj_dir in "${INPUT_DIR}"/sub-*; do
         session=$(basename "$session_dir")
         ((total_sessions++))
         
+        echo "------"
         echo "  Processing session: $session"
         
         # Anatomical directory
@@ -107,6 +108,9 @@ for subj_dir in "${INPUT_DIR}"/sub-*; do
             echo "    Warning: Input directory not found: $input_anat_dir"
             continue
         fi
+        
+        # Track the current reference file to avoid printing it multiple times
+        current_ref_file=""
         
         # Process all .nii and .nii.gz files
         while IFS= read -r -d '' output_file; do
@@ -136,34 +140,36 @@ for subj_dir in "${INPUT_DIR}"/sub-*; do
                 continue
             fi
             
-            echo "    Transforming $filename using reference: $(basename $original_file)"
+            # Print reference file only when it changes
+            if [ "$original_file" != "$current_ref_file" ]; then
+                echo "    Reference: $(basename $original_file)"
+                current_ref_file="$original_file"
+            fi
+            
+            echo "      -> $filename"
             
             # Run FSL flirt transformation
+            # Note: -interp spline is NOT used as it destroys R2star transformation (should not be necessary anyway)
             SCWRAP fsl $FSL_VERSION flirt \
                 -in "$output_file" \
                 -ref "$original_file" \
                 -out "${transform_dir}/${filename}" \
-                -interp spline \
                 -applyxfm \
-                -usesqform 2>&1 | grep -v "^$"
+                -usesqform
             
-            if [ ${PIPESTATUS[0]} -eq 0 ]; then
+            if [ $? -eq 0 ]; then
                 # Unzip the output file if it was created as .nii.gz
                 if [ -f "${transform_dir}/${filename}.gz" ]; then
                     gunzip -f "${transform_dir}/${filename}.gz"
-                    echo "      Success (unzipped): ${transform_dir}/${filename}"
-                else
-                    echo "      Success: ${transform_dir}/${filename}"
+                    echo "        (unzipped)"
                 fi
                 ((total_transformed++))
             else
-                echo "      Error: Failed to transform $filename"
+                echo "        Error: Failed to transform $filename"
                 ((total_errors++))
             fi
             
-        # done < <(find "${anat_dir}" -type f \( -name "*.nii" -o -name "*.nii.gz" \) -print0)
-        done < <(find "${anat_dir}" -type f \( -name "*MPM_Chimap.nii" \) -print0)
-
+        done < <(find "${anat_dir}" -type f \( -name "*.nii" -o -name "*.nii.gz" \) -print0 | sort -z)
     done
 done
 
