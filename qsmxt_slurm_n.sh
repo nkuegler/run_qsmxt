@@ -27,7 +27,7 @@
 # transformed back to their corresponding original input space using FSL's flirt.
 
 
-
+#SBATCH --job-name=qsmxt
 #SBATCH -c 36
 #SBATCH --mem 200G	
 #SBATCH --time 180	
@@ -131,6 +131,9 @@ if [ $? -eq 0 ]; then
         total_transformed=0
         total_errors=0
         
+        # Track the current reference file to avoid printing it multiple times
+        current_ref_file=""
+        
         # Find all .nii and .nii.gz files in processed directory
         while IFS= read -r -d '' output_file; do
             filename=$(basename "$output_file")
@@ -157,25 +160,28 @@ if [ $? -eq 0 ]; then
                 continue
             fi
             
-            echo "  Transforming $filename using reference: $(basename $original_file)"
+            # Print reference file only when it changes
+            if [ "$original_file" != "$current_ref_file" ]; then
+                echo "  Reference: $(basename $original_file)"
+                current_ref_file="$original_file"
+            fi
+            
+            echo "    -> $filename"
             
             # Run FSL flirt transformation
+            # Note: -interp spline is NOT used as it destroys R2star transformation (should not be necessary anyway)
             SCWRAP fsl $FSL_VERSION flirt \
                 -in "$output_file" \
                 -ref "$original_file" \
                 -out "${TRANSFORM_TO_ORIG_OUTPUT_DIR}/${filename}" \
                 -applyxfm \
                 -usesqform
-            # -interp spline \ # destroys R2star transformation even though interpolation shouldnt be necessary at all here (only 90 degree rotations and flips)
-
             
             if [ $? -eq 0 ]; then
                 # Unzip the output file if it was created as .nii.gz
                 if [ -f "${TRANSFORM_TO_ORIG_OUTPUT_DIR}/${filename}.gz" ]; then
                     gunzip -f "${TRANSFORM_TO_ORIG_OUTPUT_DIR}/${filename}.gz"
-                    echo "      Success (unzipped): ${TRANSFORM_TO_ORIG_OUTPUT_DIR}/${filename}"
-                else
-                    echo "      Success: ${TRANSFORM_TO_ORIG_OUTPUT_DIR}/${filename}"
+                    echo "      (unzipped)"
                 fi
                 ((total_transformed++))
             else
@@ -183,7 +189,7 @@ if [ $? -eq 0 ]; then
                 ((total_errors++))
             fi
             
-        done < <(find "${PROCESSED_ANAT_DIR}" -type f \( -name "*.nii" -o -name "*.nii.gz" \) -print0)
+        done < <(find "${PROCESSED_ANAT_DIR}" -type f \( -name "*.nii" -o -name "*.nii.gz" \) -print0 | sort -z)
         
         echo "--------"
         echo "Transformation to original space completed"
