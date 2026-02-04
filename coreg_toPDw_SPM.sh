@@ -1,10 +1,11 @@
 #!/bin/bash
 
 #
-# Coregister Chimaps to PDw Space using SPM
+# Coregister and Average Chimaps to PDw Space using SPM and FSL
 #
 # This script submits SLURM jobs to coregister T1w and MTw Chimap files to PDw Chimap
-# reference space using SPM12 rigid body transformation.
+# reference space using SPM12 rigid body transformation, then automatically averages all
+# three Chimaps (PDw reference + coregistered T1w + coregistered MTw) using FSL.
 #
 # Usage: ./coreg_toPDw_SPM.sh <INPUT_DIR>
 #
@@ -18,11 +19,17 @@
 #   1. Find all subjects and sessions in the input directory
 #   2. For each subject/session, identify T1w, MTw, and PDw Chimaps in transform_to_orig/
 #   3. Submit SLURM jobs to coregister T1w and MTw Chimaps to PDw Chimap
-#   4. Output files will be saved in coreg_toPDw/ subdirectory with _desc-coregToPDw suffix
+#   4. Submit a dependent averaging job that merges and averages the three Chimaps
+#   5. Output files will be saved in coreg_toPDw/ subdirectory
 #
-# Output naming:
-#   Input:  sub-XXX_ses-XX_acq-T1w_MPM_Chimap.nii
-#   Output: sub-XXX_ses-XX_acq-T1w_desc-coregToPDw_MPM_Chimap.nii
+# Output files:
+#   Coregistered: coreg_sub-XXX_ses-XX_acq-T1w_rec-loraksRsos_MPM_Chimap.nii
+#                 coreg_sub-XXX_ses-XX_acq-MTw_rec-loraksRsos_MPM_Chimap.nii
+#   Averaged:     sub-XXX_ses-XX_averaged_Chimap.nii
+#   Mean:         sub-XXX_ses-XX_mean_Chimap.nii
+#
+# Job dependencies:
+#   The averaging job runs only after both coregistration jobs complete successfully.
 #
 
 # Check arguments
@@ -47,6 +54,7 @@ fi
 
 # SLURM script and partitions
 SLURM_SCRIPT="/data/u_kuegler_software/git/qsm/run_qsmxt/coreg_toPDw_slurm.sh"
+AVG_SCRIPT="/data/u_kuegler_software/git/qsm/run_qsmxt/average_chimaps_slurm.sh"
 SLURM_PARTITIONS="short,group_servers,gr_weiskopf"
 
 if [ ! -f "$SLURM_SCRIPT" ]; then
@@ -54,8 +62,13 @@ if [ ! -f "$SLURM_SCRIPT" ]; then
     exit 1
 fi
 
+if [ ! -f "$AVG_SCRIPT" ]; then
+    echo "Error: Averaging script not found: $AVG_SCRIPT"
+    exit 1
+fi
+
 echo "============================================="
-echo "Coregister Chimaps to PDw Space (SPM)"
+echo "Coregister Chimaps to PDw Space (SPM) and Average them using FSL"
 echo "============================================="
 echo "Input Directory: $INPUT_DIR"
 echo "SLURM Script: $SLURM_SCRIPT"
@@ -66,6 +79,7 @@ total_subjects=0
 total_sessions=0
 total_jobs=0
 total_skipped=0
+total_avg_jobs=0
 
 # Find all subject directories in input
 for subj_dir in "${INPUT_DIR}"/sub-*; do
@@ -112,6 +126,12 @@ for subj_dir in "${INPUT_DIR}"/sub-*; do
         
         echo "    PDw reference: $(basename $pdw_chimap)"
         
+        # Initialize job tracking for this session
+        t1w_job_id=""
+        mtw_job_id=""
+        t1w_coreg_file=""
+        mtw_coreg_file=""
+        
         # Process T1w and MTw Chimaps
         for acq_type in T1w MTw; do
             # Find the Chimap for this acquisition type
@@ -122,6 +142,10 @@ for subj_dir in "${INPUT_DIR}"/sub-*; do
                 ((total_skipped++))
                 continue
             fi
+            
+            # Determine expected output filename (coreg_ prefix)
+            moving_basename=$(basename "$moving_chimap")
+            expected_coreg_file="${coreg_dir}/coreg_${moving_basename}"
             
             echo "    Submitting ${acq_type} coregistration job:"
             echo "      Moving:    $(basename $moving_chimap)"
@@ -134,10 +158,41 @@ for subj_dir in "${INPUT_DIR}"/sub-*; do
             if [ $? -eq 0 ]; then
                 echo "      Job submitted: $job_id"
                 ((total_jobs++))
+                
+                # Store job ID and expected output file
+                if [ "$acq_type" = "T1w" ]; then
+                    t1w_job_id="$job_id"
+                    t1w_coreg_file="$expected_coreg_file"
+                elif [ "$acq_type" = "MTw" ]; then
+                    mtw_job_id="$job_id"
+                    mtw_coreg_file="$expected_coreg_file"
+                fi
             else
                 echo "      Error: Failed to submit job for ${acq_type}"
             fi
         done
+        
+        # Submit averaging job if both coregistration jobs were successfully submitted
+        if [ -n "$t1w_job_id" ] && [ -n "$mtw_job_id" ]; then
+            echo "    Submitting averaging job (depends on ${t1w_job_id} and ${mtw_job_id}):"
+            echo "      PDw Reference: $(basename $pdw_chimap)"
+            echo "      T1w coreg: $(basename $t1w_coreg_file)"
+            echo "      MTw coreg: $(basename $mtw_coreg_file)"
+            
+            # Submit averaging job with dependency on both coregistration jobs
+            avg_job_id=$(sbatch -p ${SLURM_PARTITIONS} --parsable \
+                --dependency=afterok:${t1w_job_id}:${mtw_job_id} \
+                "$AVG_SCRIPT" "$pdw_chimap" "$t1w_coreg_file" "$mtw_coreg_file" "$coreg_dir")
+            
+            if [ $? -eq 0 ]; then
+                echo "      Averaging job submitted: $avg_job_id"
+                ((total_avg_jobs++))
+            else
+                echo "      Error: Failed to submit averaging job"
+            fi
+        else
+            echo "    Skipping averaging job (not all coregistration jobs were submitted)"
+        fi
         
     done
 done
@@ -148,7 +203,8 @@ echo "Job Submission Summary"
 echo "============================================="
 echo "Total subjects processed: $total_subjects"
 echo "Total sessions processed: $total_sessions"
-echo "Total jobs submitted: $total_jobs"
+echo "Total coregistration jobs submitted: $total_jobs"
+echo "Total averaging jobs submitted: $total_avg_jobs"
 echo "Total skipped: $total_skipped"
 echo "============================================="
 

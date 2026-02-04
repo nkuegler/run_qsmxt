@@ -153,7 +153,37 @@ Creates `transform_to_mpm/` subdirectories with T1w and MTw Chimaps aligned to t
 > **Note:** The transformation to the mpm space using the original coregistrations of the hMRI toolbox (from MPMCalc directory) turned out to be problematic as the resulting sforms/qforms of the T1w and MTw Chimaps differ from the PDw Chimap (MPM reference space). This makes it more difficult to process and inspect them further. 
 > To avoid this, I instead run a separate rigid-body registration using SPM to align the T1w and MTw Chimaps to the PDw Chimap (see `coreg_toPDw_SPM.sh`)."
 
+## Chimap Coregistration and Averaging
 
+The repository includes scripts for coregistering multi-contrast Chimaps (magnetic susceptibility maps) to a common reference space and averaging them to improve SNR.
+
+### Workflow
+
+**Usage:**
+```bash
+./coreg_toPDw_SPM.sh <INPUT_DIR>
+```
+
+**What it does:**
+1. For each subject/session, identifies T1w, MTw, and PDw Chimaps in `transform_to_orig/` subdirectories
+2. Submits SLURM jobs to coregister T1w and MTw Chimaps to PDw Chimap space using SPM12 rigid body transformation
+3. Automatically submits a dependent averaging job that:
+   - Merges the three coregistered Chimaps (PDw reference + coregistered T1w + coregistered MTw) using FSL `fslmerge`
+   - Computes the temporal mean across the three volumes using FSL `fslmaths`
+   - Outputs both the merged 4D volume and the averaged 3D volume
+
+**Output files** (saved in `sub-XXX/ses-XX/anat/coreg_toPDw/`):
+- `coreg_sub-XXX_ses-XX_acq-T1w_*_MPM_Chimap.nii` - Coregistered T1w Chimap
+- `coreg_sub-XXX_ses-XX_acq-MTw_*_MPM_Chimap.nii` - Coregistered MTw Chimap
+- `sub-XXX_ses-XX_merged_Chimap.nii` - Concatenated 4D volume of all three Chimaps
+- `sub-XXX_ses-XX_mean_Chimap.nii` - Averaged Chimap with improved SNR
+
+**Example:**
+```bash
+./coreg_toPDw_SPM.sh /data/pt_02262/data/TH_bids/bids/derivatives/LORAKS/derivatives/QSMxT/20260202_pdf_phaseMask2/
+```
+
+**Job dependencies:** The averaging job (`average_chimaps_slurm.sh`) only runs after both coregistration jobs complete successfully, ensuring all required files exist before averaging.
 
 # ToDo
 
