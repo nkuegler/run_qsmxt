@@ -191,3 +191,4 @@ The repository includes scripts for coregistering multi-contrast Chimaps (magnet
 - (not sure) Integrate `transform_to_mpm.sh` into the SLURM workflow as a separate job -> maybe rather integrate the second SPM registration
 - When using shared masks (T1w to PDw/MTw) estimate the registration from T1w to the other contrasts and rotate the mask accordingly before applying it.
 - Implement flag to use existing masks. When set, the name of the masking pipeline must be specified (`--existing-masks synthstrip`).
+- Implement flag to automatically delete supplementary directory after processing.
