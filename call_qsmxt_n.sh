@@ -83,7 +83,7 @@ fi
 mkdir -p "$OUTPUT_DIR"
 
 # SLURM configuration
-SLURM_PARTITIONS="short,group_servers,gr_weiskopf"
+SLURM_PARTITIONS="standard,group_servers,gr_weiskopf"
 SLURM_SCRIPT="/data/u_kuegler_software/git/qsm/run_qsmxt/qsmxt_slurm_n.sh"
 # SLURM_SCRIPT="/data/u_kuegler_software/git/qsm/run_qsmxt/qsmxt_slurm_infantdata.sh"
 

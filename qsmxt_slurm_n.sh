@@ -30,7 +30,7 @@
 #SBATCH --job-name=qsmxt
 #SBATCH -c 36
 #SBATCH --mem 200G	
-#SBATCH --time 180	
+#SBATCH --time 360	
 #SBATCH -o /data/u_kuegler_software/git/qsm/run_qsmxt/logs/%j_qsmxt.out	# redirect the output
 #
 
