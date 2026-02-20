@@ -24,8 +24,19 @@
 # location.
 #
 # NOTE: The TRANSFORM_TO_ORIG flag is accepted but not functional in this script yet.
-
-
+#
+# AUTHOR:
+#   Niklas Kuegler (kuegler@cbs.mpg.de)
+#   Max Planck Institute for Human Cognitive and Brain Sciences (MPI CBS), Leipzig
+#
+# LICENSE: MIT
+# SOURCE:  https://github.com/nkuegler/run_qsmxt
+#
+# DEPENDENCIES:
+#   - QSMxT (version defined in script)
+#   - Conda
+#   - Singularity
+#
 
 #SBATCH -c 60	
 #SBATCH --mem 200G	
@@ -38,6 +49,10 @@ OUTPUT_DIR="$2"
 SUBJECT="$3"
 SESSION="$4"  # Optional - may be empty
 TRANSFORM_TO_ORIG="${5:-false}"  # Optional - defaults to false (NOT IMPLEMENTED)
+
+# Print project banner
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/print_banner.sh"
 
 echo "Input Directory: ${INPUT_DIR}"
 echo "Output Directory: ${OUTPUT_DIR}"

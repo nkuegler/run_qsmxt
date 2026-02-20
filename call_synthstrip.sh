@@ -31,6 +31,20 @@
 #   2. Verify that sessions contain 'anat' directories with .nii files
 #   3. Submit SLURM jobs for valid subject/session combinations in parallel
 #
+# AUTHOR:
+#   Niklas Kuegler (kuegler@cbs.mpg.de)
+#   Max Planck Institute for Human Cognitive and Brain Sciences (MPI CBS), Leipzig
+#
+# LICENSE: MIT
+# SOURCE:  https://github.com/nkuegler/run_qsmxt
+#
+# DEPENDENCIES:
+#   - SLURM workload manager
+#
+
+# Print project banner
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/print_banner.sh"
 
 # Check if sufficient arguments are provided and parse options
 ACQ_TYPES="PDw,T1w,MTw"

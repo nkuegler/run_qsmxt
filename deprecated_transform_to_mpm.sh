@@ -30,6 +30,20 @@
 #   3. Transform T1w and MTw Chimap files to match their corresponding co-registered references
 #   4. Use acquisition-specific references (T1w Chimap → T1w coregistered reference, etc.)
 #
+# AUTHOR:
+#   Niklas Kuegler (kuegler@cbs.mpg.de)
+#   Max Planck Institute for Human Cognitive and Brain Sciences (MPI CBS), Leipzig
+#
+# LICENSE: MIT
+# SOURCE:  https://github.com/nkuegler/run_qsmxt
+#
+# DEPENDENCIES:
+#   - FSL (version defined in script)
+#
+
+# Print project banner
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/print_banner.sh"
 
 # Check arguments
 if [ $# -ne 2 ]; then

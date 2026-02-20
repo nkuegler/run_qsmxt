@@ -39,12 +39,24 @@
 #
 # AUTHOR:
 #   Niklas Kuegler (kuegler@cbs.mpg.de)
+#   Max Planck Institute for Human Cognitive and Brain Sciences (MPI CBS), Leipzig
+#
+# LICENSE: MIT
+# SOURCE:  https://github.com/nkuegler/run_qsmxt
+#
+# DEPENDENCIES:
+#   - MATLAB (version defined in script)
+#   - SPM12
 # ==============================================================================
 
 #SBATCH -c 8
 #SBATCH --mem 8G
 #SBATCH --time 30
 #SBATCH -o /data/u_kuegler_software/git/qsm/run_qsmxt/logs/coreg_to_PDw/%j_coregSPM.out
+
+# Print project banner
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/print_banner.sh"
 
 moving_img=$1
 reference_img=$2

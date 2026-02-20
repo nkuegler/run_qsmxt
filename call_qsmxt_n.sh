@@ -25,6 +25,20 @@
 #   4. By default, submit all jobs in parallel for maximum throughput
 #   5. With --seq flag, chain jobs with dependencies for sequential processing
 #
+# AUTHOR:
+#   Niklas Kuegler (kuegler@cbs.mpg.de)
+#   Max Planck Institute for Human Cognitive and Brain Sciences (MPI CBS), Leipzig
+#
+# LICENSE: MIT
+# SOURCE:  https://github.com/nkuegler/run_qsmxt
+#
+# DEPENDENCIES:
+#   - SLURM workload manager
+#
+
+# Print project banner
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/print_banner.sh"
 
 # Check if sufficient arguments are provided and parse options
 SEQUENTIAL=false

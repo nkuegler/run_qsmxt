@@ -18,6 +18,20 @@
 #   3. Transform all .nii and .nii.gz files to match their corresponding input space
 #   4. Use acquisition type (PDw, MTw, T1w) to match output to input reference files
 #
+# AUTHOR:
+#   Niklas Kuegler (kuegler@cbs.mpg.de)
+#   Max Planck Institute for Human Cognitive and Brain Sciences (MPI CBS), Leipzig
+#
+# LICENSE: MIT
+# SOURCE:  https://github.com/nkuegler/run_qsmxt
+#
+# DEPENDENCIES:
+#   - FSL (version defined in script)
+#
+
+# Print project banner
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/print_banner.sh"
 
 # Check arguments
 if [ $# -ne 2 ]; then

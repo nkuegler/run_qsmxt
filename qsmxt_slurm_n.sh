@@ -25,7 +25,20 @@
 #
 # If TRANSFORM_TO_ORIG is set to 'true', all output .nii/.nii.gz files will be
 # transformed back to their corresponding original input space using FSL's flirt.
-
+#
+# AUTHOR:
+#   Niklas Kuegler (kuegler@cbs.mpg.de)
+#   Max Planck Institute for Human Cognitive and Brain Sciences (MPI CBS), Leipzig
+#
+# LICENSE: MIT
+# SOURCE:  https://github.com/nkuegler/run_qsmxt
+#
+# DEPENDENCIES:
+#   - QSMxT (version defined in script)
+#   - FSL (version defined in script)
+#   - Conda
+#   - Singularity
+#
 
 #SBATCH --job-name=qsmxt
 #SBATCH -c 36
@@ -35,6 +48,10 @@
 #
 
 FSL_VERSION="6.0.6"
+
+# Print project banner
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/print_banner.sh"
 
 INPUT_DIR="$1"
 OUTPUT_DIR="$2"

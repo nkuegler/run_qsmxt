@@ -1,6 +1,20 @@
 #!/bin/bash
 
 #
+# QSMxT SLURM Job Script (Deprecated)
+#
+# AUTHOR:
+#   Niklas Kuegler (kuegler@cbs.mpg.de)
+#   Max Planck Institute for Human Cognitive and Brain Sciences (MPI CBS), Leipzig
+#
+# LICENSE: MIT
+# SOURCE:  https://github.com/nkuegler/run_qsmxt
+#
+# DEPENDENCIES:
+#   - QSMxT (version defined in script)
+#   - Conda
+#   - Singularity
+#
 #SBATCH -c 32	
 #SBATCH --mem 200G	
 #SBATCH --time 90	
@@ -8,6 +22,11 @@
 #
 
 SUBJECT="$1"
+
+# Print project banner
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../print_banner.sh"
+
 echo ${SUBJECT}
 echo "--------"
 

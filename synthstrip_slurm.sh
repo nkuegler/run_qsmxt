@@ -35,6 +35,17 @@
 #
 # Output is placed in OUTPUT_DIR maintaining BIDS structure.
 #
+# AUTHOR:
+#   Niklas Kuegler (kuegler@cbs.mpg.de)
+#   Max Planck Institute for Human Cognitive and Brain Sciences (MPI CBS), Leipzig
+#
+# LICENSE: MIT
+# SOURCE:  https://github.com/nkuegler/run_qsmxt
+#
+# DEPENDENCIES:
+#   - FreeSurfer (version defined in script)
+#   - FSL (version defined in script)
+#
 
 #SBATCH -c 8
 #SBATCH --mem 32G
@@ -44,6 +55,10 @@
 # Software versions
 FREESURFER_VERSION="7.4.1"
 FSL_VERSION="6.0.6"
+
+# Print project banner
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/print_banner.sh"
 
 INPUT_DIR="$1"
 OUTPUT_DIR="$2"

@@ -30,6 +30,13 @@ function coreg_toPDw(moving, reference)
     %   - Uses normalized mutual information as cost function for robust alignment
     %   - Uses custom prefix 'coreg_' for the co-registered image instead of SPM's default 'r' prefix
     %   - Performs rigid body transformation (6 degrees of freedom: 3 translations + 3 rotations)
+    %
+    % AUTHOR:
+    %   Niklas Kuegler (kuegler@cbs.mpg.de)
+    %   Max Planck Institute for Human Cognitive and Brain Sciences (MPI CBS), Leipzig
+    %
+    % LICENSE: MIT
+    % SOURCE:  https://github.com/nkuegler/run_qsmxt
 
     addpath('/data/u_kuegler_software/git/spm12');
 

@@ -26,6 +26,21 @@
 #
 # This script is typically called as a dependent SLURM job by call_coreg_toPDw.sh after
 # both coregistration jobs complete successfully.
+#
+# AUTHOR:
+#   Niklas Kuegler (kuegler@cbs.mpg.de)
+#   Max Planck Institute for Human Cognitive and Brain Sciences (MPI CBS), Leipzig
+#
+# LICENSE: MIT
+# SOURCE:  https://github.com/nkuegler/run_qsmxt
+#
+# DEPENDENCIES:
+#   - FSL (version defined in script)
+#
+
+# Print project banner
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/print_banner.sh"
 
 # Check arguments
 if [ $# -ne 4 ]; then
