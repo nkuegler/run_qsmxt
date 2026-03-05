@@ -1,194 +1,266 @@
 # run_qsmxt
-A repository to QSMxT for a batch of subject/sessions
 
+Batch processing scripts for [QSMxT](https://qsmxt.github.io/QSMxT/) (Quantitative Susceptibility Mapping) on a SLURM cluster. This repository provides wrapper scripts to submit and manage QSMxT jobs, optional brain extraction with FREESURFER's SynthStrip for skull stripping, spatial transformations back to original acquisition space, and multi-contrast Chimap coregistration and averaging.
 
-> **Important hint: QSMxT seems to not run on the SLURM node drachenkopf (probably due to incompatibility of the QSMxT container and the installed EPYC CPU). This node is therefore excluded in the sbatch command using the -x flag!**
+*These scripts are designed to work with Multi-Parameter Mapping (MPM) data (multiple contrasts: T1w, PDw, MTw) but can be re-purposed for other data by adjusting the acquisition file patterns and contrast-specific parameters in the SLURM scripts.*
 
-## How to run 
+> **Note:** These scripts are designed for a specific SLURM cluster environment and require custom shell configurations (`bash.singularity`, `bash.conda`) to make Singularity containers available and initialize Conda.
 
-- adjust properties of the qsmxt command in `qsmxt_slurm.sh`
+## Installation
+
+Please refer to the [QSMxT documentation](https://qsmxt.github.io/QSMxT/installation) for installation instructions. The QSMxT developers provide a Singularity container that includes all necessary dependencies, which is the recommended way to run QSMxT on a cluster. As the container and the software are updated regularly, it's best to follow the official installation guide to ensure compatibility. 
+
+**Here you can find instructions how I set up QSMxT on my machine using Singularity and Conda. Keep in mind that these may not be up-to-date:**
+
+You can either use the QSMxT in [Neurodesk](https://www.neurodesk.org/docs/getting-started/neurocommand/linux-and-hpc/) or install the singularity container by itself ([see HPC installation](https://qsmxt.github.io/QSMxT/installation#quickstart-via-neurodesk)). I used the latter, which is described below.
+
+Either way, run the installation in a conda/mamba environment. [See this page](https://wiki.cbs.mpg.de/spaces/CBSNP/pages/158105663/Setting+up+Conda) for instructions on how to set this up (restricted access)..
++ **ATTENTION:** If you are part of the MPI CBS infrastructure, make sure that you did **NOT** install miniforge in your home directory. It is too small so that the installation is likely to fail. Follow the link above to learn how to install it in your personal software directory.
+
+### QSMxT container
+For installation of the transparent singularity container, follow the steps below (adapted from HPC installation [on this website](https://qsmxt.github.io/QSMxT/installation#quickstart-via-neurodesk)).
+
+**Steps from the website above (version: 2025-01-21):**
+QSMxT can be installed on an HPC or Linux machine using [transparent singularity](https://github.com/neurodesk/transparent-singularity). Transparent singularity installs QSMxT using an Apptainer (or in my case Singularity) container and exposes the underlying tools to the host environment, which is necessary for HPCs using PBS Graph or SLURM.
+1. Install or load Singularity or Apptainer on your HPC. Test if it works by executing `singularity --version`.
+2. Install the QSMxT container via transparent singularity:
+```
+git clone https://github.com/NeuroDesk/transparent-singularity qsmxt_8.0.2_20250403
+cd qsmxt_8.0.2_20250403
+./run_transparent_singularity.sh --container qsmxt_8.0.2_20250403.simg
+source activate_qsmxt_8.0.2_20250403.simg.sh
+```
+> **Note:** QSMxT switched from Singularity to Apptainer a while ago. Those are essentially the same, but if your cluster only has Singularity (as in my case), you can still need to adjust the build command provided in the QSMxT docs for Singularity.
+> **Important:** Please refer to the official QSMxT documentation for building the newest container possible, as older container versions may not be available anymore. I hope that the adjustment from transparent_apptainer to transparent_singularity will keep working.
+
+**Another Note:** You must have sufficient storage available in `$SINGULARITY_TMPDIR` (by default `/tmp`), `$SINGULARITY_CACHEDIR` (by default `$HOME/.singularity/cache`), and the repository directory to store the QSMxT container. **Make sure to define these paths before building the container.** I used a small bash script which I call before building and every time before running the container (optionally, you can add these lines to your `.bashrc`):
 
 ```
-getserver -sb
-
-cd /path/to/output/dir
-# before the qsmxt command is executed, the singularity container is made available by sourcing `bash.singularity` (custom file) and the correct conda environment is activated after sourcing `bash.conda` (custom file)
-
-/data/u_kuegler_software/git/qsm/run_qsmxt/call_qsmxt_n.sh input_dir output_dir sub-001 sub-002 sub-003
+######### initialize singularity and add container to $PATH ###############
+export SINGULARITY_TMPDIR=/data/u_kuegler_software/singularity/tmp
+export SINGULARITY_CACHEDIR=/data/u_kuegler_software/singularity/cache
+echo ">>> Making Singularity containers available"
+# Container in /data/u_kuegler_software/git/qsmxt_8.0.2_20250403
+export PATH=/data/u_kuegler_software/git/qsmxt_8.0.2_20250403:$PATH
 ```
 
-> Note: it is important to specify the session's name, not only the subject's name. Otherwise, the execution of `call_qsmxt.sh` raises an error in the romeo_combine_phase step *(this only works if there are no session directories in the subject directory)*.
-
-> Note: These scripts are proprietary, as they require some custom files for making the singularity container and conda available
-
-
-### Command for IronSleep Data
+### Conda environment
+1. Check if Miniforge is installed and initialized using `which conda`. 
+2. If so, create a new conda environment and install QSMxT in it:
 ```
-# sbatch on slurm
-./call_qsmxt_n.sh --seq /data/pt_02262/data/TH_bids/bids/derivatives/LORAKS_LCPCA_distCorr/ /data/pt_02262/data/TH_bids/bids/derivatives/LORAKS_LCPCA_distCorr_QSMxT/20250714_qsmxt_pdf/ sub-001
-
-# not slurm:
-qsmxt /data/pt_02262/data/TH_bids/bids/derivatives/LORAKS_LCPCA_distCorr/ \
-    /data/pt_02262/data/TH_bids/bids/derivatives/LORAKS_LCPCA_distCorr_QSMxT/20250714_qsmxt_pdf/ \
-    --premade 'gre' \
-    --do_qsm \
-    --do_swi \
-    --labels_file '/data/u_kuegler_software/miniforge3/envs/qsmxt8/lib/python3.8/site-packages/qsmxt/aseg_labels.csv' \
-    --recs rec-loraksRsos \  
-    --acqs acq-T1w acq-PDw acq-MTw \  
-    --bf_algorithm 'pdf' \
-    --auto_yes
+#create conda environment for qsmxt
+conda create -n qsmxt python=3.8
+conda activate qsmxt
+pip install qsmxt==8.0.2
 ```
 
-## Brain Extraction with SynthStrip
+## Quick Start
 
-The repository includes scripts for batch brain extraction using FreeSurfer's `mri_synthstrip`.
+1. **Run QSMxT** with the `--transform-to-orig` flag to process subjects and transform outputs back to original acquisition space:
 
-### Usage
+   ```bash
+   ./call_qsmxt_n.sh --transform-to-orig <INPUT_DIR> <OUTPUT_DIR> <SUBJECT1> [SUBJECT2] ...
+   ```
+
+2. **Average Chimaps** across contrasts once QSMxT processing is complete. This coregisters T1w and MTw Chimaps to PDw space and computes the mean:
+
+   ```bash
+   ./call_coreg_toPDw.sh <OUTPUT_DIR>
+   ```
+
+   This submits coregistration jobs for each subject/session and automatically queues a dependent averaging job using `average_chimaps_slurm.sh`.
+
+## Usage
+
+### QSMxT Processing (`call_qsmxt_n.sh`)
+
+The main entry point for batch QSMxT processing. It discovers sessions with `anat/` data and submits SLURM jobs for each subject/session combination.
 
 ```bash
-./call_synthstrip.sh [--acqs <ACQ_TYPES>] [--no-csf] [--holefill <ITERATIONS>] [--separate-masks] <INPUT_DIR> <OUTPUT_DIR> <SUBJECT1> [SUBJECT2] ...
+./call_qsmxt_n.sh [--seq] [--transform-to-orig] <INPUT_DIR> <OUTPUT_DIR> <SUBJECT1> [SUBJECT2] ...
+```
+
+**Arguments:**
+
+| Argument     | Description                                           |
+| ------------ | ----------------------------------------------------- |
+| `INPUT_DIR`  | Path to input BIDS directory containing subject data  |
+| `OUTPUT_DIR` | Path to output directory for processed results        |
+| `SUBJECT*`   | One or more subject identifiers (e.g., `sub-001`)     |
+
+**Options:**
+
+| Option                | Description                                                               |
+| --------------------- | ------------------------------------------------------------------------- |
+| `--seq`               | Process jobs sequentially (with SLURM dependencies). Default is parallel. |
+| `--transform-to-orig` | Transform outputs back to original input space using FSL flirt.           |
+
+**What it does:**
+
+1. Checks each subject directory for session subdirectories (or a direct `anat/` directory).
+2. Verifies that sessions contain `anat` directories with `.nii` or `.nii.gz` files.
+3. Submits SLURM jobs via `qsmxt_slurm_n.sh` for valid subject/session combinations.
+4. By default, all jobs run in parallel. Use `--seq` to chain them with dependencies.
+
+**SLURM job details** (`qsmxt_slurm_n.sh`):
+This defines the actual QSMxT processing command. Adjust this script to customize the QSM pipeline.
+
+- Runs QSMxT with the `gre` premade configuration.
+- Performs QSM reconstruction (Phase-based masking, ROMEO phase unwrapping, PDF background field removal), SWI processing, and R2* mapping.
+- Processes acquisitions: `acq-T1w`, `acq-PDw`, `acq-MTw` with `rec-loraksRsos`.
+- When `--transform-to-orig` is set, all output NIfTI files are transformed back to their corresponding original input space using FSL flirt with sform-based transformation (not a co-registration). Transformed files are placed in a `transform_to_orig/` subdirectory.
+- Temporary Results are initially placed in a `Supplementary/` directory and moved to the final output location upon successful completion.
+
+> **Important for MPI CBS members:** QSMxT does not run on the SLURM node `drachenkopf` (likely due to incompatibility of the AMD EPYC CPU the QSMxT container). This node is automatically excluded via the `-x` flag.
+
+**Example:**
+*(automatically called by the SLURM job submission script)*
+
+```bash
+./call_qsmxt_n.sh --transform-to-orig /path/to/bids/input /path/to/output sub-001 sub-002 sub-003
+```
+
+### Brain Extraction with SynthStrip (Optional)
+
+The repository includes scripts for batch brain extraction using FreeSurfer's `mri_synthstrip`. This step is **optional** — if you use pre-computed brain masks, you need to pass additional flags to the QSMxT SLURM script.
+
+#### Running SynthStrip
+
+```bash
+./call_synthstrip.sh [OPTIONS] <INPUT_DIR> <OUTPUT_DIR> <SUBJECT1> [SUBJECT2] ...
 ```
 
 **Options:**
-- `--acqs <ACQ_TYPES>` - Comma-separated acquisition types (default: `PDw,T1w,MTw`)
-- `--no-csf` - Exclude CSF from brain mask
-- `--holefill <ITERATIONS>` - Enable mask hole-filling with specified dilation/erosion iterations
-- `--separate-masks` - Create separate brain masks for each acquisition type (see below)
+
+| Option                    | Description                                                                |
+| ------------------------- | -------------------------------------------------------------------------- |
+| `--acqs <ACQ_TYPES>`      | Comma-separated acquisition types (default: `PDw,T1w,MTw`)                |
+| `--no-csf`                | Exclude CSF from brain mask                                                |
+| `--holefill <ITERATIONS>` | Enable mask hole-filling with specified dilation/erosion iterations         |
+| `--separate-masks`        | Create separate brain masks for each acquisition type (see below)          |
+
+**Default behavior (shared mask mode):**
+Only the reference contrast (T1w by default) is processed with `mri_synthstrip`. For other acquisition types (PDw, MTw), symbolic links are created pointing to the T1w mask, and brain-extracted images are generated by applying that mask. This ensures consistent brain extraction across all contrasts while saving computation time.
+
+> **Warning:** There may be slight misregistration between T1w and other contrasts as they come from separate sequences. No explicit co-registration is performed. Use `--separate-masks` if brain alignment across contrasts is poor.
+
+**Separate masks mode** (`--separate-masks`): Each acquisition type is independently processed with `mri_synthstrip`, creating unique masks for each contrast.
+
+The reference contrast can be changed by editing `REF_BRAIN_MASK_CONTRAST` in `synthstrip_slurm.sh` (default: `T1w`).
 
 **Features:**
-- **Shared brain mask mode (default):** Only the reference contrast (T1w by default) is processed with `mri_synthstrip`. For other acquisition types (PDw, MTw), symbolic links are created pointing to the reference mask, and brain-extracted images are generated by applying the reference mask. The reason for this approach is that PDw and MTw images typically provide lower quality brain masks than T1w. 
-> **WARNING:** There may be a slight misregistration between T1w and other contrasts as they are acquired by separate sequences. No explicit co-registration is performed here. Keep in mind that the mask may not perfectly align on all contrasts. Use the separate masks mode if your the brains are not well aligned across contrasts.
-- **Separate masks mode** (`--separate-masks`): Each acquisition type is processed independently with `mri_synthstrip`, creating unique masks for each contrast.
-- **Configurable reference contrast:** The reference contrast used for shared masks can be changed by modifying `REF_BRAIN_MASK_CONTRAST` in `synthstrip_slurm.sh` (default: `T1w`).
-- Automatically discovers sessions with anatomical data
-- Processes multiple acquisition types (PDw, T1w, MTw)
-- Matches files with `echo-01` or `echo-1` naming conventions
+
 - GPU acceleration (auto-detected)
 - Generates both brain-extracted images (`_brain.nii`) and masks (`_mask.nii`)
-- **Saves execution command** to `synthstrip_command.txt` in the output directory for reproducibility
-- **Optional morphological hole-filling** of masks using FSL's fslmaths:
-  - Performed directly within the same SLURM job after mask creation
-  - Uses successive dilation and erosion operations (configurable number of iterations)
-  - Overwrites original mask with filled version
-  - Re-applies filled mask to input image, updating `_brain.nii` output
-- Parallel job submission by default
-- Warning when multiple matching files found per acquisition type (processes all)
+- Optional morphological hole-filling using FSL's `fslmaths` (dilation + erosion)
+- Saves the execution command to `synthstrip_command.txt` in the output directory
+- Parallel job submission
 
-### Examples
+**Example:**
 
 ```bash
-# Process all subjects with default acquisition types (shared T1w mask mode)
-./call_synthstrip.sh /path/to/input /path/to/output sub-001 sub-002 sub-003
-
-# Custom acquisition types with CSF exclusion
-./call_synthstrip.sh --acqs PDw,T1w --no-csf /path/to/input /path/to/output sub-001 sub-002
-
-# With hole-filling (7 iterations)
-./call_synthstrip.sh --holefill 7 /path/to/input /path/to/output sub-001 sub-002
-
-# Separate masks mode - create unique mask for each acquisition type
-./call_synthstrip.sh --separate-masks /path/to/input /path/to/output sub-001 sub-002
-
-# Combine multiple options
-./call_synthstrip.sh --acqs PDw,T1w --no-csf --holefill 5 /path/to/input /path/to/output sub-001
-
-# IronSleep data example
-./call_synthstrip.sh \
-  /data/pt_02262/data/TH_bids/bids/derivatives/LORAKS_LCPCA_distCorr \
-  /data/pt_02262/data/TH_bids/bids/derivatives/LORAKS_LCPCA_distCorr/derivatives/synthstrip \
-  sub-001 sub-002
+./call_synthstrip.sh --no-csf --holefill 7 /path/to/input /path/to/synthstrip_output sub-001 sub-002
 ```
 
-> **Note:** Default approach: only T1w images are processed with `mri_synthstrip`, and symbolic links are created for PDw/MTw masks pointing to the T1w mask. This ensures consistent brain extraction across all contrasts. Use `--separate-masks` if you need independent masks for each acquisition type. The reference contrast can be changed by editing `REF_BRAIN_MASK_CONTRAST` in `synthstrip_slurm.sh`.
+#### Using SynthStrip Masks with QSMxT
 
-> **Note:** SynthStrip works on all SLURM nodes (no node exclusions needed). When hole-filling is enabled, the original `_mask.nii` file is overwritten with the filled version, and the `_brain.nii` file is regenerated using the filled mask.
-
-
-# Example synthstrip
-
-```
-subjs=$(find /data/pt_02262/data/liege_data/bids/derivatives/LORAKS/derivatives/LCPCA_distCorr/ -maxdepth 1 -type d -name 'sub-*' -exec basename {} \; | sort -V | tr '\n' ' ')
-
-./call_synthstrip.sh --no-csf --holefill 7 /data/pt_02262/data/liege_data/bids/derivatives/LORAKS/derivatives/LCPCA_distCorr/ /data/pt_02262/data/liege_data/bids/derivatives/LORAKS/derivatives/LCPCA_distCorr/derivatives/synthstrip/ $subjs
-
-./call_qsmxt_n.sh --transform-to-orig /data/pt_02262/data/liege_data/bids/derivatives/LORAKS/derivatives/LCPCA_distCorr/ /data/pt_02262/data/liege_data/bids/derivatives/LORAKS/derivatives/QSMxT/20251228_qsmxt_pdf_synthstripFilled/ $subjs 
-```
-
-## Spatial Transformations
-
-The repository includes scripts for transforming QSMxT outputs to different spatial reference frames.
-
-### Transform to Original Space
-
-Transform QSMxT outputs back to the original input acquisition space using `deprecated_transform_to_orig.sh` or the `--transform-to-orig` flag in `call_qsmxt_n.sh`.
-
-**Integrated workflow (recommended):**
-```bash
-# Transform outputs during QSMxT processing
-./call_qsmxt_n.sh --transform-to-orig <INPUT_DIR> <OUTPUT_DIR> <SUBJECTS...>
-```
-
-**Standalone script:**
-```bash
-# Transform already processed outputs
-./deprecated_transform_to_orig.sh <QSMXT_OUTPUT_DIR> <ORIGINAL_INPUT_DIR>
-```
-
-Creates `transform_to_orig/` subdirectories containing outputs aligned to original acquisition space. Uses FSL flirt with sform-based transformation.
-
-### Transform to MPM Space
-
-Transform Chimap outputs to co-registered MPM reference space using `deprecated_transform_to_mpm.sh`. This aligns QSMxT-derived Chimaps with acquisitions that have been co-registered to PDw space via SPM.
+To use pre-computed SynthStrip brain masks in QSMxT, you need to uncomment or add the following flags in `qsmxt_slurm_n.sh`:
 
 ```bash
-./deprecated_transform_to_mpm.sh <QSMXT_OUTPUT_DIR> <MPM_REFERENCE_DIR>
+--use_existing_masks \
+--existing_masks_pipeline 'synthstrip' \
 ```
 
-Creates `transform_to_mpm/` subdirectories with T1w and MTw Chimaps aligned to their corresponding co-registered references. Uses FSL flirt with spline interpolation.
+These flags tell QSMxT to look for existing brain masks (produced by the SynthStrip pipeline) instead of computing its own.
 
-> **Note:** The `transform_to_orig` functionality is integrated into `qsmxt_slurm_n.sh` via the `--transform-to-orig` flag. The `deprecated_transform_to_mpm.sh` script is currently standalone but may be integrated as a separate SLURM job in future versions (see following note for concerns).
+### Chimap Coregistration and Averaging (`call_coreg_toPDw.sh`)
 
+After QSMxT processing with `--transform-to-orig`, you can coregister the multi-contrast Chimaps (magnetic susceptibility maps) to a common reference space and average them to improve SNR.
 
-> **Note:** The transformation to the mpm space using the original coregistrations of the hMRI toolbox (from MPMCalc directory) turned out to be problematic as the resulting sforms/qforms of the T1w and MTw Chimaps differ from the PDw Chimap (MPM reference space). This makes it more difficult to process and inspect them further. 
-> To avoid this, I instead run a separate rigid-body registration using SPM to align the T1w and MTw Chimaps to the PDw Chimap (see `call_coreg_toPDw.sh`)."
-
-## Chimap Coregistration and Averaging
-
-The repository includes scripts for coregistering multi-contrast Chimaps (magnetic susceptibility maps) to a common reference space and averaging them to improve SNR.
-
-### Workflow
-
-**Usage:**
 ```bash
 ./call_coreg_toPDw.sh <INPUT_DIR>
 ```
 
-**What it does:**
-1. For each subject/session, identifies T1w, MTw, and PDw Chimaps in `transform_to_orig/` subdirectories
-2. Submits SLURM jobs to coregister T1w and MTw Chimaps to PDw Chimap space using SPM12 rigid body transformation
-3. Automatically submits a dependent averaging job that:
-   - Merges the three coregistered Chimaps (PDw reference + coregistered T1w + coregistered MTw) using FSL `fslmerge`
-   - Computes the temporal mean across the three volumes using FSL `fslmaths`
-   - Outputs both the merged 4D volume and the averaged 3D volume
+**Arguments:**
 
-**Output files** (saved in `sub-XXX/ses-XX/anat/coreg_toPDw/`):
-- `coreg_sub-XXX_ses-XX_acq-T1w_*_MPM_Chimap.nii` - Coregistered T1w Chimap
-- `coreg_sub-XXX_ses-XX_acq-MTw_*_MPM_Chimap.nii` - Coregistered MTw Chimap
-- `sub-XXX_ses-XX_merged_Chimap.nii` - Concatenated 4D volume of all three Chimaps
-- `sub-XXX_ses-XX_mean_Chimap.nii` - Averaged Chimap with improved SNR
+| Argument    | Description                                                                        |
+| ----------- | ---------------------------------------------------------------------------------- |
+| `INPUT_DIR` | Path to QSMxT output directory containing Chimaps in `transform_to_orig/` subdirs  |
+
+**What it does:**
+
+1. Finds all subjects and sessions in the input directory.
+2. Identifies T1w, MTw, and PDw Chimaps in each `transform_to_orig/` subdirectory.
+3. Submits SLURM coregistration jobs (`coreg_toPDw_slurm.sh`) to align T1w and MTw Chimaps to PDw space using SPM12 rigid body transformation.
+4. Submits a dependent averaging job (`average_chimaps_slurm.sh`) that runs only after both coregistration jobs complete successfully:
+   - Merges the three Chimaps (PDw reference + coregistered T1w + coregistered MTw) into a 4D volume using FSL `fslmerge`.
+   - Computes the temporal mean across the three volumes using FSL `fslmaths`.
+
+**Output files** (saved in `<subject>/<session>/anat/coreg_toPDw/`):
+
+| File                                                     | Description                                      |
+| -------------------------------------------------------- | ------------------------------------------------ |
+| `coreg_<subject>_<session>_acq-T1w_*_MPM_Chimap.nii`    | Coregistered T1w Chimap                          |
+| `coreg_<subject>_<session>_acq-MTw_*_MPM_Chimap.nii`    | Coregistered MTw Chimap                          |
+| `<subject>_<session>_merged_Chimap.nii`                  | Concatenated 4D volume of all three Chimaps      |
+| `<subject>_<session>_mean_Chimap.nii`                    | Averaged Chimap (improved SNR)                   |
 
 **Example:**
+
 ```bash
-./call_coreg_toPDw.sh /data/pt_02262/data/TH_bids/bids/derivatives/LORAKS/derivatives/QSMxT/20260202_pdf_phaseMask2/
+./call_coreg_toPDw.sh /path/to/qsmxt_output
 ```
 
-**Job dependencies:** The averaging job (`average_chimaps_slurm.sh`) only runs after both coregistration jobs complete successfully, ensuring all required files exist before averaging.
+### Spatial Transformations (Deprecated Standalone Scripts)
 
-# ToDo
+These standalone scripts are provided for reference but their functionality is now integrated into the main workflow:
 
-- Implement option to clean up the supplementary directory at the end of each job (and a final clean-up at the end of all jobs)
-- (not sure) Integrate `transform_to_mpm.sh` into the SLURM workflow as a separate job -> maybe rather integrate the second SPM registration
-- When using shared masks (T1w to PDw/MTw) estimate the registration from T1w to the other contrasts and rotate the mask accordingly before applying it.
-- Implement flag to use existing masks. When set, the name of the masking pipeline must be specified (`--existing-masks synthstrip`).
-- Implement flag to automatically delete supplementary directory after processing.
+- **`deprecated_transform_to_orig.sh`** — Transforms already-processed QSMxT outputs back to original acquisition space. This functionality is now integrated via the `--transform-to-orig` flag in `call_qsmxt_n.sh`.
+
+  ```bash
+  ./deprecated_transform_to_orig.sh <QSMXT_OUTPUT_DIR> <ORIGINAL_INPUT_DIR>
+  ```
+
+- **`deprecated_transform_to_mpm.sh`** — Transforms Chimap outputs to co-registered MPM reference space using FSL flirt with spline interpolation.
+
+  ```bash
+  ./deprecated_transform_to_mpm.sh <QSMXT_OUTPUT_DIR> <MPM_REFERENCE_DIR>
+  ```
+
+> **Note:** The MPM-space transformation using original hMRI toolbox coregistrations turned out to be problematic as the resulting sforms/qforms of T1w and MTw Chimaps differ from the PDw Chimap. The recommended approach is to use `call_coreg_toPDw.sh` instead, which performs a separate rigid-body registration with SPM.
+
+## Typical End-to-End Workflow
+
+```bash
+# 1. (Optional) Run brain extraction with SynthStrip
+./call_synthstrip.sh --no-csf --holefill 7 <INPUT_DIR> <SYNTHSTRIP_OUTPUT_DIR> sub-001 sub-002
+
+# 2. Run QSMxT (if using SynthStrip masks, edit qsmxt_slurm_n.sh first — see above)
+./call_qsmxt_n.sh --transform-to-orig <INPUT_DIR> <OUTPUT_DIR> sub-001 sub-002
+
+# 3. Coregister and average Chimaps
+./call_coreg_toPDw.sh <OUTPUT_DIR>
+```
+
+## Repository Structure
+
+| File / Directory                  | Description                                                        |
+| --------------------------------- | ------------------------------------------------------------------ |
+| `call_qsmxt_n.sh`                | Main batch submission script for QSMxT processing                  |
+| `qsmxt_slurm_n.sh`               | SLURM job script for a single QSMxT subject/session                |
+| `call_synthstrip.sh`             | Batch submission script for SynthStrip brain extraction             |
+| `synthstrip_slurm.sh`            | SLURM job script for SynthStrip on a single subject/session        |
+| `call_coreg_toPDw.sh`            | Batch submission for Chimap coregistration to PDw space             |
+| `coreg_toPDw_slurm.sh`           | SLURM job script for SPM coregistration                            |
+| `coreg_toPDw.m`                  | MATLAB/SPM function for rigid body coregistration                  |
+| `average_chimaps_slurm.sh`       | SLURM job script for merging and averaging Chimaps                 |
+| `deprecated_transform_to_orig.sh`| Standalone script for transform-to-original-space (deprecated)     |
+| `deprecated_transform_to_mpm.sh` | Standalone script for transform-to-MPM-space (deprecated)          |
+| `sform_toPDw_manTest.py`         | Python utility for sform inspection/testing                        |
+| `qsm_weighted_av_*.m`            | MATLAB scripts for weighted averaging of QSM maps                  |
+| `logs/`                          | Directory for SLURM job output logs                                |
+| `deprecated_qsmxt/`              | Older versions of QSMxT scripts                                   |
+
+## License
+
+See [LICENSE](LICENSE) for details.
