@@ -95,8 +95,6 @@ if [[ -n "$SESSION" ]]; then
         --recs rec-loraksRsos \
         --acqs acq-T1w acq-PDw acq-MTw \
         --bf_algorithm 'pdf' \
-        --use_existing_masks \
-        --existing_masks_pipeline 'synthstrip' \
         --qsm_reference none \
         --auto_yes
 else
@@ -112,8 +110,6 @@ else
         --recs rec-loraksRsos \
         --acqs acq-T1w acq-PDw acq-MTw \
         --bf_algorithm 'pdf' \
-        --use_existing_masks \
-        --existing_masks_pipeline 'synthstrip' \
         --qsm_reference none \
         --auto_yes
 fi
@@ -121,7 +117,9 @@ fi
     # --do_segmentation \ # requires fastsurfer for segmentation
     # --use_existing_masks \
     # --existing_masks_pipeline 'synthstrip' \
-    # --gpu 'cuda'
+    # --bf_algorithm 'vsharp' \
+    # --masking_algorithm bet \
+    # --mask_erosions 2 \
 
 if [ $? -eq 0 ]; then
     # Transform outputs back to original space if requested
