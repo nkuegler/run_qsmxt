@@ -10,18 +10,44 @@ Batch processing scripts for [QSMxT](https://qsmxt.github.io/QSMxT/) (Quantitati
 
 Please refer to the [QSMxT documentation](https://qsmxt.github.io/QSMxT/installation) for installation instructions. The QSMxT developers provide a Singularity container that includes all necessary dependencies, which is the recommended way to run QSMxT on a cluster. As the container and the software are updated regularly, it's best to follow the official installation guide to ensure compatibility. 
 
-**Here you can find instructions how I set up QSMxT on my machine using Singularity and Conda. Keep in mind that these may not be up-to-date:**
+**Here you can find instructions how I set up QSMxT on my machine using Singularity and Conda. These instructions are outdated and the specified container does not work anymore! The newest version requires `apptainer` instead of `singularity`.**
 
 You can either use the QSMxT in [Neurodesk](https://www.neurodesk.org/docs/getting-started/neurocommand/linux-and-hpc/) or install the singularity container by itself ([see HPC installation](https://qsmxt.github.io/QSMxT/installation#quickstart-via-neurodesk)). I used the latter, which is described below.
 
-Either way, run the installation in a conda/mamba environment. [See this page](https://wiki.cbs.mpg.de/spaces/CBSNP/pages/158105663/Setting+up+Conda) for instructions on how to set this up (restricted access)..
+Either way, run the installation in a conda environment. [See this page](https://wiki.cbs.mpg.de/spaces/CBSNP/pages/158105663/Setting+up+Conda) for instructions on how to set this up (restricted access)..
 + **ATTENTION:** If you are part of the MPI CBS infrastructure, make sure that you did **NOT** install miniforge in your home directory. It is too small so that the installation is likely to fail. Follow the link above to learn how to install it in your personal software directory.
 
 ### QSMxT container
+
+> **For MPI CBS members:** 
+> > Apptainer is not available in the MPI CBS IT infrastructure and the mentioned singularity build does not work anymore. You can find the pre-built QSMxT singularity container in `/data/p_gr_weiskopf_software/singularity/qsmxt_8.0.2_20250403/`. You must use this instead of installing the container yourself. 
+> > + **What does this mean for you?**
+> >     + You don't need to clone the QSMxT repository.
+> >     + You still need to create and define the singularity `cache` and `tmp` directories as described below.
+> >     + You still need to set up the conda environment as described below.
+
+\
 For installation of the transparent singularity container, follow the steps below (adapted from HPC installation [on this website](https://qsmxt.github.io/QSMxT/installation#quickstart-via-neurodesk)).
 
 **Steps from the website above (version: 2025-01-21):**
 QSMxT can be installed on an HPC or Linux machine using [transparent singularity](https://github.com/neurodesk/transparent-singularity). Transparent singularity installs QSMxT using an Apptainer (or in my case Singularity) container and exposes the underlying tools to the host environment, which is necessary for HPCs using PBS Graph or SLURM.
+
+### First things first:
+You must have sufficient storage available in `$SINGULARITY_TMPDIR` (by default `/tmp`), `$SINGULARITY_CACHEDIR` (by default `$HOME/.singularity/cache`), and the repository directory to store the QSMxT container. **Make sure to define these paths before building the container.** I used a small bash script which I call before building and every time before running the container (optionally, you can add these lines to your `.bashrc`):
+
+```
+######### define singularity cache and tmp directories and add container to $PATH ###############
+export SINGULARITY_TMPDIR=/data/u_kuegler_software/singularity/tmp
+export SINGULARITY_CACHEDIR=/data/u_kuegler_software/singularity/cache
+echo ">>> Making Singularity containers available"
+# Container in /data/u_kuegler_software/git/qsmxt_8.0.2_20250403
+export PATH=/data/u_kuegler_software/git/qsmxt_8.0.2_20250403:$PATH
+
+# if you are part of the MPI CBS, you have to replace the last line of the code block above by:
+# export PATH=/data/p_gr_weiskopf_software/singularity/qsmxt_8.0.2_20250403:$PATH
+```
+
+### Now, the installation:
 1. Install or load Singularity or Apptainer on your HPC. Test if it works by executing `singularity --version`.
 2. Install the QSMxT container via transparent singularity:
 ```
@@ -31,20 +57,10 @@ cd qsmxt_8.0.2_20250403
 source activate_qsmxt_8.0.2_20250403.simg.sh
 ```
 > **Note:** QSMxT switched from Singularity to Apptainer a while ago. Those are essentially the same, but if your cluster only has Singularity (as in my case), you can still need to adjust the build command provided in the QSMxT docs for Singularity.
+
 > **Important:** Please refer to the official QSMxT documentation for building the newest container possible, as older container versions may not be available anymore. I hope that the adjustment from transparent_apptainer to transparent_singularity will keep working.
 
-**Another Note:** You must have sufficient storage available in `$SINGULARITY_TMPDIR` (by default `/tmp`), `$SINGULARITY_CACHEDIR` (by default `$HOME/.singularity/cache`), and the repository directory to store the QSMxT container. **Make sure to define these paths before building the container.** I used a small bash script which I call before building and every time before running the container (optionally, you can add these lines to your `.bashrc`):
-
-```
-######### initialize singularity and add container to $PATH ###############
-export SINGULARITY_TMPDIR=/data/u_kuegler_software/singularity/tmp
-export SINGULARITY_CACHEDIR=/data/u_kuegler_software/singularity/cache
-echo ">>> Making Singularity containers available"
-# Container in /data/u_kuegler_software/git/qsmxt_8.0.2_20250403
-export PATH=/data/u_kuegler_software/git/qsmxt_8.0.2_20250403:$PATH
-```
-
-### Conda environment
+### Create a conda environment
 1. Check if Miniforge is installed and initialized using `which conda`. 
 2. If so, create a new conda environment and install QSMxT in it:
 ```
@@ -53,6 +69,9 @@ conda create -n qsmxt python=3.8
 conda activate qsmxt
 pip install qsmxt==8.0.2
 ```
+
+> [!IMPORTANT]
+> Now you should be able to run QSMxT commands in this conda environment, and the container will be automatically used when you execute `qsmxt` commands. Make sure to activate the conda environment and to add the container path to your `$PATH` before using qsmxt!
 
 ## Quick Start
 
