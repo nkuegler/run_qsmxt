@@ -4,7 +4,7 @@
 #SBATCH -c 4
 #SBATCH --mem=4G
 #SBATCH --time 30
-#SBATCH -o /data/u_kuegler_software/git/qsm/run_qsmxt/logs/%j_avgChimaps.out
+#SBATCH -o /data/u_kuegler_software/git/qsm/run_qsmxt/logs/coreg_to_PDw/%j_avgChimaps.out
 
 #
 # Merge and Average Chimaps using FSL

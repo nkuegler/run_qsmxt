@@ -166,7 +166,7 @@ for subj_dir in "${INPUT_DIR}"/sub-*; do
             echo "      Reference: $(basename $pdw_chimap)"
             echo "      Output dir: $coreg_dir"
             
-            # Submit SLURM job
+            # Submit coregistration SLURM job
             job_id=$(sbatch -p ${SLURM_PARTITIONS} --parsable "$SLURM_SCRIPT" "$moving_chimap" "$pdw_chimap" "$coreg_dir")
             
             if [ $? -eq 0 ]; then

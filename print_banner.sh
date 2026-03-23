@@ -11,7 +11,9 @@
 # SOURCE:  https://github.com/nkuegler/run_qsmxt
 #
 
+echo "========================================"
 echo "Niklas Kuegler's MRI processing wrapper:"
-echo "    QSMxT"
+echo "  QSMxT"
+echo "========================================"
 echo ""
 echo ""
