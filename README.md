@@ -65,8 +65,8 @@ source activate_qsmxt_8.0.2_20250403.simg.sh
 2. If so, create a new conda environment and install QSMxT in it:
 ```
 #create conda environment for qsmxt
-conda create -n qsmxt python=3.8
-conda activate qsmxt
+conda create -n qsmxt8 python=3.8
+conda activate qsmxt8
 pip install qsmxt==8.0.2
 ```
 
