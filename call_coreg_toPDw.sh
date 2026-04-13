@@ -7,10 +7,13 @@
 # reference space using SPM12 rigid body transformation, then automatically averages all
 # three Chimaps (PDw reference + coregistered T1w + coregistered MTw) using FSL.
 #
-# Usage: ./call_coreg_toPDw.sh <INPUT_DIR>
+# Usage: ./call_coreg_toPDw.sh [--pdw-t1w-only] <INPUT_DIR>
 #
 # Arguments:
 #   INPUT_DIR - Path to directory containing Chimap files in transform_to_orig subdirectories
+#
+# Options:
+#   --pdw-t1w-only - Average only PDw and T1w Chimaps (skip MTw in averaging step)
 #
 # Directory structure:
 #   INPUT_DIR: sub-XXX/ses-XX/anat/transform_to_orig/*_MPM_Chimap.nii
@@ -46,19 +49,42 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/print_banner.sh"
 
-# Check arguments
-if [ $# -ne 1 ]; then
+# Parse arguments
+PDW_T1W_ONLY=false
+POSITIONAL_ARGS=()
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --pdw-t1w-only)
+            PDW_T1W_ONLY=true
+            shift
+            ;;
+        -h|--help)
+            echo "Usage: $0 [--pdw-t1w-only] <INPUT_DIR>"
+            echo ""
+            echo "Arguments:"
+            echo "  INPUT_DIR - Path to directory with Chimaps (sub-XXX/ses-XX/anat/transform_to_orig/)"
+            echo ""
+            echo "Options:"
+            echo "  --pdw-t1w-only - Average only PDw and T1w Chimaps (skip MTw in averaging step)"
+            echo ""
+            echo "Example: $0 --pdw-t1w-only /path/to/qsmxt_output"
+            exit 0
+            ;;
+        *)
+            POSITIONAL_ARGS+=("$1")
+            shift
+            ;;
+    esac
+done
+
+if [ ${#POSITIONAL_ARGS[@]} -ne 1 ]; then
     echo "Error: Incorrect number of arguments"
-    echo "Usage: $0 <INPUT_DIR>"
-    echo ""
-    echo "Arguments:"
-    echo "  INPUT_DIR - Path to directory with Chimaps (sub-XXX/ses-XX/anat/transform_to_orig/)"
-    echo ""
-    echo "Example: $0 /path/to/qsmxt_output"
+    echo "Usage: $0 [--pdw-t1w-only] <INPUT_DIR>"
     exit 1
 fi
 
-INPUT_DIR="$1"
+INPUT_DIR="${POSITIONAL_ARGS[0]}"
 
 # Validate directory
 if [ ! -d "$INPUT_DIR" ]; then
@@ -84,6 +110,11 @@ fi
 echo "============================================="
 echo "Coregister Chimaps to PDw Space (SPM) and Average them using FSL"
 echo "============================================="
+if [ "$PDW_T1W_ONLY" = true ]; then
+    echo "Averaging mode: PDw + T1w only"
+else
+    echo "Averaging mode: PDw + T1w + MTw"
+fi
 echo "Input Directory: $INPUT_DIR"
 echo "SLURM Script: $SLURM_SCRIPT"
 echo "============================================="
@@ -186,26 +217,48 @@ for subj_dir in "${INPUT_DIR}"/sub-*; do
             fi
         done
         
-        # Submit averaging job if both coregistration jobs were successfully submitted
-        if [ -n "$t1w_job_id" ] && [ -n "$mtw_job_id" ]; then
-            echo "    Submitting averaging job (depends on ${t1w_job_id} and ${mtw_job_id}):"
-            echo "      PDw Reference: $(basename $pdw_chimap)"
-            echo "      T1w coreg: $(basename $t1w_coreg_file)"
-            echo "      MTw coreg: $(basename $mtw_coreg_file)"
-            
-            # Submit averaging job with dependency on both coregistration jobs
-            avg_job_id=$(sbatch -p ${SLURM_PARTITIONS} --parsable \
-                --dependency=afterok:${t1w_job_id}:${mtw_job_id} \
-                "$AVG_SCRIPT" "$pdw_chimap" "$t1w_coreg_file" "$mtw_coreg_file" "$coreg_dir")
-            
-            if [ $? -eq 0 ]; then
-                echo "      Averaging job submitted: $avg_job_id"
-                ((total_avg_jobs++))
+        # Submit averaging job
+        if [ "$PDW_T1W_ONLY" = true ]; then
+            if [ -n "$t1w_job_id" ]; then
+                echo "    Submitting PDw+T1w averaging job (depends on ${t1w_job_id}):"
+                echo "      PDw Reference: $(basename $pdw_chimap)"
+                echo "      T1w coreg: $(basename $t1w_coreg_file)"
+
+                # Submit averaging job with dependency on T1w coregistration only
+                avg_job_id=$(sbatch -p ${SLURM_PARTITIONS} --parsable \
+                    --dependency=afterok:${t1w_job_id} \
+                    "$AVG_SCRIPT" --pdw-t1w-only "$pdw_chimap" "$t1w_coreg_file" "$coreg_dir")
+
+                if [ $? -eq 0 ]; then
+                    echo "      Averaging job submitted: $avg_job_id"
+                    ((total_avg_jobs++))
+                else
+                    echo "      Error: Failed to submit averaging job"
+                fi
             else
-                echo "      Error: Failed to submit averaging job"
+                echo "    Skipping averaging job (T1w coregistration job was not submitted)"
             fi
         else
-            echo "    Skipping averaging job (not all coregistration jobs were submitted)"
+            if [ -n "$t1w_job_id" ] && [ -n "$mtw_job_id" ]; then
+                echo "    Submitting averaging job (depends on ${t1w_job_id} and ${mtw_job_id}):"
+                echo "      PDw Reference: $(basename $pdw_chimap)"
+                echo "      T1w coreg: $(basename $t1w_coreg_file)"
+                echo "      MTw coreg: $(basename $mtw_coreg_file)"
+
+                # Submit averaging job with dependency on both coregistration jobs
+                avg_job_id=$(sbatch -p ${SLURM_PARTITIONS} --parsable \
+                    --dependency=afterok:${t1w_job_id}:${mtw_job_id} \
+                    "$AVG_SCRIPT" "$pdw_chimap" "$t1w_coreg_file" "$mtw_coreg_file" "$coreg_dir")
+
+                if [ $? -eq 0 ]; then
+                    echo "      Averaging job submitted: $avg_job_id"
+                    ((total_avg_jobs++))
+                else
+                    echo "      Error: Failed to submit averaging job"
+                fi
+            else
+                echo "    Skipping averaging job (not all coregistration jobs were submitted)"
+            fi
         fi
         
     done

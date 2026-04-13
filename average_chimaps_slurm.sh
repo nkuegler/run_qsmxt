@@ -9,20 +9,25 @@
 #
 # Merge and Average Chimaps using FSL
 #
-# This script averages three Chimap files (PDw reference, coregistered T1w, coregistered MTw)
+# This script averages Chimap files (PDw reference, coregistered T1w, coregistered MTw)
 # by merging them along the time dimension and computing their temporal mean using FSL tools.
 #
-# Usage: sbatch average_chimaps_slurm.sh <PDW_REF_FILE> <T1W_COREG_FILE> <MTW_COREG_FILE> <OUTPUT_DIR>
+# Usage:
+#   sbatch average_chimaps_slurm.sh <PDW_REF_FILE> <T1W_COREG_FILE> <MTW_COREG_FILE> <OUTPUT_DIR>
+#   sbatch average_chimaps_slurm.sh --pdw-t1w-only <PDW_REF_FILE> <T1W_COREG_FILE> <OUTPUT_DIR>
 #
 # Arguments:
 #   PDW_REF_FILE    - Path to the PDw reference Chimap
 #   T1W_COREG_FILE  - Path to the coregistered T1w Chimap
-#   MTW_COREG_FILE  - Path to the coregistered MTw Chimap
+#   MTW_COREG_FILE  - Path to the coregistered MTw Chimap (required unless --pdw-t1w-only is used)
 #   OUTPUT_DIR      - Directory where merged and mean files will be saved
 #
+# Options:
+#   --pdw-t1w-only  - Average only PDw and T1w Chimaps (skip MTw)
+#
 # Output files:
-#   <subject>_<session>_merged_Chimap.nii - Concatenated 4D volume of all three Chimaps
-#   <subject>_<session>_mean_Chimap.nii     - Temporal mean across the three Chimaps
+#   <subject>_<session>_merged_Chimap.nii - Concatenated 4D volume of included Chimaps
+#   <subject>_<session>_mean_Chimap.nii     - Temporal mean across included Chimaps
 #
 # This script is typically called as a dependent SLURM job by call_coreg_toPDw.sh after
 # both coregistration jobs complete successfully.
@@ -42,26 +47,66 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/print_banner.sh"
 
-# Check arguments
-if [ $# -ne 4 ]; then
-    echo "Error: Incorrect number of arguments"
-    echo "Usage: $0 <REF_FILE> <T1W_COREG_FILE> <MTW_COREG_FILE> <OUTPUT_DIR>"
-    exit 1
-fi
+# Parse arguments
+PDW_T1W_ONLY=false
+POSITIONAL_ARGS=()
 
-PDW_REF_FILE="$1"
-T1W_COREG_FILE="$2"
-MTW_COREG_FILE="$3"
-OUTPUT_DIR="$4"
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --pdw-t1w-only)
+            PDW_T1W_ONLY=true
+            shift
+            ;;
+        -h|--help)
+            echo "Usage: $0 [--pdw-t1w-only] <REF_FILE> <T1W_COREG_FILE> [<MTW_COREG_FILE>] <OUTPUT_DIR>"
+            exit 0
+            ;;
+        *)
+            POSITIONAL_ARGS+=("$1")
+            shift
+            ;;
+    esac
+done
+
+if [ "$PDW_T1W_ONLY" = true ]; then
+    if [ ${#POSITIONAL_ARGS[@]} -ne 3 ]; then
+        echo "Error: Incorrect number of arguments for --pdw-t1w-only mode"
+        echo "Usage: $0 --pdw-t1w-only <REF_FILE> <T1W_COREG_FILE> <OUTPUT_DIR>"
+        exit 1
+    fi
+    PDW_REF_FILE="${POSITIONAL_ARGS[0]}"
+    T1W_COREG_FILE="${POSITIONAL_ARGS[1]}"
+    MTW_COREG_FILE=""
+    OUTPUT_DIR="${POSITIONAL_ARGS[2]}"
+else
+    if [ ${#POSITIONAL_ARGS[@]} -ne 4 ]; then
+        echo "Error: Incorrect number of arguments"
+        echo "Usage: $0 <REF_FILE> <T1W_COREG_FILE> <MTW_COREG_FILE> <OUTPUT_DIR>"
+        exit 1
+    fi
+    PDW_REF_FILE="${POSITIONAL_ARGS[0]}"
+    T1W_COREG_FILE="${POSITIONAL_ARGS[1]}"
+    MTW_COREG_FILE="${POSITIONAL_ARGS[2]}"
+    OUTPUT_DIR="${POSITIONAL_ARGS[3]}"
+fi
 
 FSL_VERSION="6.0.6"
 
 echo "============================================="
 echo "Merge and Average Chimaps"
 echo "============================================="
+if [ "$PDW_T1W_ONLY" = true ]; then
+    echo "Mode: PDw + T1w only (MTw skipped)"
+else
+    echo "Mode: PDw + T1w + MTw"
+fi
 echo "PDw reference file: $PDW_REF_FILE"
 echo "T1w coregistered: $T1W_COREG_FILE"
-echo "MTw coregistered: $MTW_COREG_FILE"
+if [ "$PDW_T1W_ONLY" = true ]; then
+    echo "MTw coregistered: (skipped)"
+else
+    echo "MTw coregistered: $MTW_COREG_FILE"
+fi
 echo "Output directory: $OUTPUT_DIR"
 echo "============================================="
 
@@ -76,7 +121,7 @@ if [ ! -f "$T1W_COREG_FILE" ]; then
     exit 1
 fi
 
-if [ ! -f "$MTW_COREG_FILE" ]; then
+if [ "$PDW_T1W_ONLY" = false ] && [ ! -f "$MTW_COREG_FILE" ]; then
     echo "Error: MTw coregistered file not found: $MTW_COREG_FILE"
     exit 1
 fi
@@ -104,9 +149,13 @@ echo "  Merged: ${merged_output}.nii"
 echo "  Mean: ${mean_output}.nii"
 echo ""
 
-# Merge the three Chimap files along the time dimension
+# Merge Chimap files along the time dimension
 echo "Step 1: Merging Chimaps..."
-SCWRAP fsl $FSL_VERSION fslmerge -t "$merged_output" "$PDW_REF_FILE" "$T1W_COREG_FILE" "$MTW_COREG_FILE"
+if [ "$PDW_T1W_ONLY" = true ]; then
+    SCWRAP fsl $FSL_VERSION fslmerge -t "$merged_output" "$PDW_REF_FILE" "$T1W_COREG_FILE"
+else
+    SCWRAP fsl $FSL_VERSION fslmerge -t "$merged_output" "$PDW_REF_FILE" "$T1W_COREG_FILE" "$MTW_COREG_FILE"
+fi
 
 if [ $? -ne 0 ]; then
     echo "Error: fslmerge failed"

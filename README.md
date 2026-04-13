@@ -84,7 +84,7 @@ pip install qsmxt==8.0.2
 2. **Average Chimaps** across contrasts once QSMxT processing is complete. This coregisters T1w and MTw Chimaps to PDw space and computes the mean:
 
    ```bash
-   ./call_coreg_toPDw.sh <OUTPUT_DIR>
+   ./call_coreg_toPDw.sh [--pdw-t1w-only] <OUTPUT_DIR>
    ```
 
    This submits coregistration jobs for each subject/session and automatically queues a dependent averaging job using `average_chimaps_slurm.sh`.
@@ -197,7 +197,7 @@ These flags tell QSMxT to look for existing brain masks (produced by the SynthSt
 After QSMxT processing with `--transform-to-orig`, you can coregister the multi-contrast Chimaps (magnetic susceptibility maps) to a common reference space and average them to improve SNR.
 
 ```bash
-./call_coreg_toPDw.sh <INPUT_DIR>
+./call_coreg_toPDw.sh [--pdw-t1w-only] <INPUT_DIR>
 ```
 
 **Arguments:**
@@ -206,14 +206,20 @@ After QSMxT processing with `--transform-to-orig`, you can coregister the multi-
 | ----------- | ---------------------------------------------------------------------------------- |
 | `INPUT_DIR` | Path to QSMxT output directory containing Chimaps in `transform_to_orig/` subdirs  |
 
+**Options:**
+
+| Option             | Description                                                                 |
+| ------------------ | --------------------------------------------------------------------------- |
+| `--pdw-t1w-only`   | Average only PDw and T1w Chimaps. MTw is skipped in averaging.              |
+
 **What it does:**
 
 1. Finds all subjects and sessions in the input directory.
 2. Identifies T1w, MTw, and PDw Chimaps in each `transform_to_orig/` subdirectory.
 3. Submits SLURM coregistration jobs (`coreg_toPDw_slurm.sh`) to align T1w and MTw Chimaps to PDw space using SPM12 rigid body transformation.
-4. Submits a dependent averaging job (`average_chimaps_slurm.sh`) that runs only after both coregistration jobs complete successfully:
-   - Merges the three Chimaps (PDw reference + coregistered T1w + coregistered MTw) into a 4D volume using FSL `fslmerge`.
-   - Computes the temporal mean across the three volumes using FSL `fslmaths`.
+4. Submits a dependent averaging job (`average_chimaps_slurm.sh`):
+   - Default mode: runs after both T1w and MTw coregistration jobs complete and averages PDw + T1w + MTw.
+   - `--pdw-t1w-only` mode: runs after T1w coregistration only and averages PDw + T1w. Missing MTw does not block averaging.
 
 **Output files** (saved in `<subject>/<session>/anat/coreg_toPDw/`):
 
@@ -221,13 +227,16 @@ After QSMxT processing with `--transform-to-orig`, you can coregister the multi-
 | -------------------------------------------------------- | ------------------------------------------------ |
 | `coreg_<subject>_<session>_acq-T1w_*_MPM_Chimap.nii`    | Coregistered T1w Chimap                          |
 | `coreg_<subject>_<session>_acq-MTw_*_MPM_Chimap.nii`    | Coregistered MTw Chimap                          |
-| `<subject>_<session>_merged_Chimap.nii`                  | Concatenated 4D volume of all three Chimaps      |
+| `<subject>_<session>_merged_Chimap.nii`                  | Concatenated 4D volume of included Chimaps       |
 | `<subject>_<session>_mean_Chimap.nii`                    | Averaged Chimap (improved SNR)                   |
 
 **Example:**
 
 ```bash
 ./call_coreg_toPDw.sh /path/to/qsmxt_output
+
+# Average only PDw + T1w (skip MTw in averaging)
+./call_coreg_toPDw.sh --pdw-t1w-only /path/to/qsmxt_output
 ```
 
 ### Spatial Transformations (Deprecated Standalone Scripts)
@@ -258,7 +267,7 @@ These standalone scripts are provided for reference but their functionality is n
 ./call_qsmxt_n.sh --transform-to-orig <INPUT_DIR> <OUTPUT_DIR> sub-001 sub-002
 
 # 3. Coregister and average Chimaps
-./call_coreg_toPDw.sh <OUTPUT_DIR>
+./call_coreg_toPDw.sh [--pdw-t1w-only] <OUTPUT_DIR>
 ```
 
 ## Repository Structure
