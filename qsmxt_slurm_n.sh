@@ -94,6 +94,7 @@ if [[ -n "$SESSION" ]]; then
         --sessions "${SESSION}" \
         --recs rec-loraksRsos \
         --acqs acq-T1w acq-PDw acq-MTw \
+        --qsm_algorithm rts \
         --bf_algorithm 'pdf' \
         --qsm_reference none \
         --auto_yes
@@ -109,11 +110,13 @@ else
         --subjects "${SUBJECT}" \
         --recs rec-loraksRsos \
         --acqs acq-T1w acq-PDw acq-MTw \
+        --qsm_algorithm rts \
         --bf_algorithm 'pdf' \
         --qsm_reference none \
         --auto_yes
 fi
 
+    # --qsm_algorithm rts \ # rts or nextqsm
     # --do_segmentation \ # requires fastsurfer for segmentation
     # --use_existing_masks \
     # --existing_masks_pipeline 'synthstrip' \
