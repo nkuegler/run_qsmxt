@@ -19,18 +19,21 @@ Either way, run the installation in a conda environment. [See this page](https:/
 
 ### QSMxT container
 
+There are multiple ways to use QSMxT. I used the transparent singularity container, which is a convenient way to run QSMxT on a cluster without having to worry about dependencies. It is also possible use the container with Apptainer rather than Singularity.
+
 > **For MPI CBS members:** 
-> > Apptainer is not available in the MPI CBS IT infrastructure and the mentioned singularity build does not work anymore. You can find the pre-built QSMxT singularity container in `/data/p_gr_weiskopf_software/singularity/qsmxt_8.0.2_20250403/`. You must use this instead of installing the container yourself. 
+> > You can find the an older pre-built QSMxT singularity container in `/data/p_gr_weiskopf_software/singularity/qsmxt_8.0.2_20250403/`. You may use this instead of downloading the container yourself. 
 > > + **What does this mean for you?**
-> >     + You don't need to clone the QSMxT repository.
+> >     + You don't need to clone the original QSMxT repository.
+> >     + You don't need to build the singularity container yourself.
 > >     + You still need to create and define the singularity `cache` and `tmp` directories as described below.
 > >     + You still need to set up the conda environment as described below.
 
 \
-For installation of the transparent singularity container, follow the steps below (adapted from HPC installation [on this website](https://qsmxt.github.io/QSMxT/installation#quickstart-via-neurodesk)).
+For downloading the pre-built transparent singularity container, follow the steps below (adapted from HPC installation [on this website](https://qsmxt.github.io/QSMxT/installation#hpc-installation)).
 
-**Steps from the website above (version: 2025-01-21):**
-QSMxT can be installed on an HPC or Linux machine using [transparent singularity](https://github.com/neurodesk/transparent-singularity). Transparent singularity installs QSMxT using an Apptainer (or in my case Singularity) container and exposes the underlying tools to the host environment, which is necessary for HPCs using PBS Graph or SLURM.
+**Steps from the website above (version: 2026-06-04):**
+QSMxT can be installed on an HPC or Linux machine using [transparent singularity](https://github.com/neurodesk/transparent-singularity). Transparent singularity installs QSMxT using a Singularity container and exposes the underlying tools to the host environment, which is necessary for HPCs using SLURM.
 
 ### First things first:
 You must have sufficient storage available in `$SINGULARITY_TMPDIR` (by default `/tmp`), `$SINGULARITY_CACHEDIR` (by default `$HOME/.singularity/cache`), and the repository directory to store the QSMxT container. **Make sure to define these paths before building the container.** I used a small bash script which I call before building and every time before running the container (optionally, you can add these lines to your `.bashrc`):
@@ -40,10 +43,11 @@ You must have sufficient storage available in `$SINGULARITY_TMPDIR` (by default 
 export SINGULARITY_TMPDIR=/data/u_kuegler_software/singularity/tmp
 export SINGULARITY_CACHEDIR=/data/u_kuegler_software/singularity/cache
 echo ">>> Making Singularity containers available"
-# Container in /data/u_kuegler_software/git/qsmxt_8.0.2_20250403
-export PATH=/data/u_kuegler_software/git/qsmxt_8.0.2_20250403:$PATH
+# Container in /data/u_kuegler_software/git/qsmxt_8.3.2_20260421
+export PATH=/data/u_kuegler_software/git/qsmxt_8.3.2_20260421:$PATH
+# The last line will be automatically added to your .bashrc when building the container with transparent singularity. You should remove this from the .bashrc.
 
-# if you are part of the MPI CBS, you have to replace the last line of the code block above by:
+# if you want to use the pre-built container in `/data/p_gr_weiskopf_software/singularity/`, you have to replace the last line of the code block above by:
 # export PATH=/data/p_gr_weiskopf_software/singularity/qsmxt_8.0.2_20250403:$PATH
 ```
 
@@ -51,23 +55,26 @@ export PATH=/data/u_kuegler_software/git/qsmxt_8.0.2_20250403:$PATH
 1. Install or load Singularity or Apptainer on your HPC. Test if it works by executing `singularity --version`.
 2. Install the QSMxT container via transparent singularity:
 ```
-git clone https://github.com/NeuroDesk/transparent-singularity qsmxt_8.0.2_20250403
-cd qsmxt_8.0.2_20250403
-./run_transparent_singularity.sh --container qsmxt_8.0.2_20250403.simg
-source activate_qsmxt_8.0.2_20250403.simg.sh
-```
-> **Note:** QSMxT switched from Singularity to Apptainer a while ago. Those are essentially the same, but if your cluster only has Singularity (as in my case), you can still need to adjust the build command provided in the QSMxT docs for Singularity.
+# clone the newest version of the QSMxT container from transparent singularity (or apptainer) repository.
+# list of all Neurodesk containers: https://raw.githubusercontent.com/NeuroDesk/neurodesk/master/cvmfs/log.txt
+git clone https://github.com/neurodesk/transparent-singularity qsmxt_8.3.2_20260421 
 
-> **Important:** Please refer to the official QSMxT documentation for building the newest container possible, as older container versions may not be available anymore. I hope that the adjustment from transparent_apptainer to transparent_singularity will keep working.
+cd qsmxt_8.3.2_20260421
+./run_transparent_singularity.sh --container qsmxt_8.3.2_20260421.simg
+source activate_qsmxt_8.3.2_20260421.simg.sh
+```
+> **Note:** You can either use Transparent Singularity or Transparent Apptainer, depending on what is available on your system.
+
+> **Important:** Please refer to the official QSMxT documentation for building the newest container possible. Older container versions may lose support at some point.
 
 ### Create a conda environment
 1. Check if Miniforge is installed and initialized using `which conda`. 
 2. If so, create a new conda environment and install QSMxT in it:
 ```
 #create conda environment for qsmxt
-conda create -n qsmxt8 python=3.8
+conda create -n qsmxt8 python=3.10
 conda activate qsmxt8
-pip install qsmxt==8.0.2
+pip install qsmxt==8.3.2
 ```
 
 > [!IMPORTANT]
@@ -88,6 +95,10 @@ pip install qsmxt==8.0.2
    ```
 
    This submits coregistration jobs for each subject/session and automatically queues a dependent averaging job using `average_chimaps_slurm.sh`.
+
+> [!WARNING]
+> This coregistration fails sometimes. Always check your resulting maps! This must be updated to be more robust.
+
 
 ## Usage
 
@@ -199,6 +210,9 @@ After QSMxT processing with `--transform-to-orig`, you can coregister the multi-
 ```bash
 ./call_coreg_toPDw.sh [--pdw-t1w-only] <INPUT_DIR>
 ```
+
+> [!WARNING]
+> This coregistration fails sometimes. Always check your resulting maps! This must be updated to be more robust.
 
 **Arguments:**
 

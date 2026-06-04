@@ -192,3 +192,4 @@ The repository includes scripts for coregistering multi-contrast Chimaps (magnet
 - When using shared masks (T1w to PDw/MTw) estimate the registration from T1w to the other contrasts and rotate the mask accordingly before applying it.
 - Implement flag to use existing masks. When set, the name of the masking pipeline must be specified (`--existing-masks synthstrip`).
 - Implement flag to automatically delete supplementary directory after processing.
+- Make coregistration to PDw more robust (maybe some preprocessing steps like n4bias correction or smoothing before registration). Update the hint in the README after fixed.
