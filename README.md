@@ -1,5 +1,7 @@
 # run_qsmxt
 
+***Deprecated! QSMxT received a major update. This repository is still operational but uses an old QSMxT version (Python implementation). Installation instructions and scripts will be adapted to the new QSMxT version (Rust) soon.***
+
 Batch processing scripts for [QSMxT](https://qsmxt.github.io/QSMxT/) (Quantitative Susceptibility Mapping) on a SLURM cluster. This repository provides wrapper scripts to submit and manage QSMxT jobs, optional brain extraction with FREESURFER's SynthStrip for skull stripping, spatial transformations back to original acquisition space, and multi-contrast Chimap coregistration and averaging.
 
 *These scripts are designed to work with Multi-Parameter Mapping (MPM) data (multiple contrasts: T1w, PDw, MTw) but can be re-purposed for other data by adjusting the acquisition file patterns and contrast-specific parameters in the SLURM scripts.*
